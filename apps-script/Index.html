@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  /* 手机优先：深绿顶栏 + 白色卡片，像外卖/打车 app 首页 */
+  :root{
+    --brand:#0E5E3F; --brand-2:#13804F; --brand-soft:#E7F4EC;
+    --bg:#F4F6F5; --card:#FFFFFF; --ink:#16201B; --muted:#66736C; --line:#E2E8E4;
+    --warn:#F2A33A; --danger:#C8432F;
+    --r:18px;
+    --font:'Noto Sans SC',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}
+  button,input,textarea,select{font-family:inherit;font-size:16px}
+  .wrap{max-width:560px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:110px}
+  .top{background:linear-gradient(160deg,var(--brand),#0A4A31);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px 22px;border-radius:0 0 26px 26px}
+  .brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand h1{font-size:20px;font-weight:900;margin:0;letter-spacing:.5px}
+  .brand .dot{width:40px;height:40px;border-radius:50%;background:#F7C948;color:#0E5E3F;display:grid;place-items:center;font-weight:900}
+  .search{margin-top:16px;background:#fff;border-radius:14px;display:flex;align-items:center;gap:10px;padding:12px 14px}
+  .search svg{flex:none}
+  .search input{border:0;outline:0;flex:1;min-width:0;color:var(--ink);background:transparent}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:16px 16px 4px;scrollbar-width:none}
+  .chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--ink);cursor:pointer}
+  .chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  h2{font-size:19px;font-weight:900;margin:18px 16px 10px}
+  .list{display:grid;gap:14px;padding:0 16px}
+  .ev{background:var(--card);border-radius:var(--r);overflow:hidden;box-shadow:0 1px 0 var(--line);cursor:pointer;display:grid;grid-template-columns:110px 1fr;min-height:110px}
+  .ev:focus-visible,.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+  .cover{background:linear-gradient(150deg,var(--brand-2),var(--brand));color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;background-size:cover;background-position:center;position:relative}
+  .cover .d{font-size:30px;font-weight:900;line-height:1}
+  .cover .m{font-size:12px;letter-spacing:1px;opacity:.9}
+  .ev .body{padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .ev .name{font-weight:700;font-size:16px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .meta{color:var(--muted);font-size:13px;display:flex;gap:6px;align-items:center;min-width:0}
+  .meta span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tag{display:inline-block;background:var(--brand-soft);color:var(--brand);font-size:12px;font-weight:700;border-radius:8px;padding:3px 8px;align-self:flex-start}
+  .tag.free{background:#FFF3DD;color:#9A5B00}
+  .tag.full{background:#FCE9E5;color:#C8432F}
+  .tag.few{background:#FFF3DD;color:#9A5B00}
+  .lnk{display:inline-block;margin-top:4px;color:var(--brand-2);font-weight:700;font-size:14px;text-decoration:none}
+  .cbtns{display:flex;gap:8px;margin-top:8px}
+  .btn.sm{padding:8px 14px;font-size:14px;border-radius:10px;text-decoration:none;display:inline-block}
+  .btn.wa{background:#1FA855;color:#fff}
+  .empty{margin:30px 16px;padding:28px 18px;text-align:center;color:var(--muted);background:var(--card);border-radius:var(--r)}
+  /* 详情 */
+  .hero{height:220px;background:linear-gradient(150deg,var(--brand-2),var(--brand));background-size:cover;background-position:center;position:relative}
+  .back{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);left:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.95);display:grid;place-items:center;cursor:pointer}
+  .sheet{background:var(--card);margin-top:-24px;border-radius:24px 24px 0 0;position:relative;padding:22px 18px 10px;min-height:60vh}
+  .sheet h3{font-size:22px;font-weight:900;margin:6px 0 14px;line-height:1.3}
+  .row{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+  .row .ic{width:36px;height:36px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;flex:none}
+  .row b{display:block;font-size:15px}
+  .row small{color:var(--muted)}
+  .desc{white-space:pre-wrap;line-height:1.75;color:#333E38;margin:16px 0}
+  .bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
+  .bar .in{max-width:528px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .bar .price{flex:1}
+  .bar .price small{color:var(--muted);display:block;font-size:12px}
+  .bar .price b{font-size:18px}
+  .btn{border:0;border-radius:14px;padding:14px 22px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
+  .btn.block{width:100%}
+  .btn.ghost{background:var(--brand-soft);color:var(--brand)}
+  .btn:disabled{opacity:.6}
+  /* 表单 */
+  form{display:grid;gap:14px;margin-top:8px}
+  label{font-size:14px;font-weight:500;display:grid;gap:6px}
+  label i{color:var(--danger);font-style:normal}
+  input,textarea,select{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#FAFCFB;color:var(--ink);width:100%}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--brand-2);border-color:transparent}
+  .err{color:var(--danger);font-size:14px;min-height:20px}
+  .hint{color:var(--muted);font-size:13px;margin:-4px 0 0}
+  /* 名片 */
+  .done{padding:28px 16px;display:grid;gap:18px;text-align:center}
+  .ok{width:64px;height:64px;border-radius:50%;background:var(--brand-soft);display:grid;place-items:center;margin:0 auto}
+  .card{text-align:left;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(140deg,#0E5E3F 0%,#13804F 60%,#2A9D63 100%);box-shadow:0 14px 30px -14px rgba(14,94,63,.55);position:relative;overflow:hidden}
+  .card:after{content:"";position:absolute;right:-50px;top:-50px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.08)}
+  .card .nm{font-size:24px;font-weight:900}
+  .card .tt{opacity:.85;margin-top:2px}
+  .card .co{font-weight:700;margin-top:14px}
+  .card .ln{font-size:14px;opacity:.9;margin-top:4px;word-break:break-all}
+  .card .ft{margin-top:18px;padding-top:12px;border-top:1px dashed rgba(255,255,255,.35);font-size:13px;display:flex;justify-content:space-between;gap:10px}
+  .qrbox{background:#fff;border-radius:14px;padding:12px;display:grid;place-items:center;margin-top:16px;position:relative;z-index:1}
+  .qrbox img,.qrbox canvas{display:block;max-width:100%;height:auto}
+  .qrcap{font-size:12px;text-align:center;opacity:.9;margin-top:8px;position:relative;z-index:1}
+  .scan{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px 16px;color:#fff}
+  .scan.s-ok{background:#13804F}.scan.s-dup{background:#B7791F}.scan.s-bad{background:#B83A28}.scan.s-pin{background:var(--brand)}
+  .scan .big{font-size:30px;font-weight:900;margin:12px 0 4px}
+  .scan .who{font-size:24px;font-weight:900;margin-top:18px}
+  .scan .sub{opacity:.9;margin-top:4px;line-height:1.6}
+  .scan .tick{width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;margin:0 auto}
+  .scan input{max-width:260px;margin:16px auto 0;text-align:center;font-size:22px;letter-spacing:6px}
+  .scan .btn{background:#fff;color:var(--brand);margin-top:14px}
+  .loading{padding:40px;text-align:center;color:var(--muted)}
+  @media (prefers-reduced-motion:no-preference){.ev{transition:transform .15s}.ev:active{transform:scale(.98)}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="loading">载入中…</div></div>
+
+<script>
+const BOOT = <?!= boot ?>;
+const S = { events: [], filter: '全部', q: '', view: 'home', ev: null, reg: null };
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+function parseDate(s){ const m = String(s||'').match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; }
+function isFree(f){ return !f || /^(0|free|免费|rm\s*0)$/i.test(String(f).trim()); }
+function feeText(f){ return isFree(f) ? '免费' : (/^\d/.test(f) ? 'RM ' + f : f); }
+function coverStyle(e){ return /^https:\/\//.test(e.cover) ? `style="background-image:url('${esc(e.cover)}')"` : ''; }
+const ICON = {
+  cal:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E5E3F" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  pin:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E5E3F" stroke-width="2"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+  tag:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E5E3F" stroke-width="2"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
+  back:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16201B" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg>',
+  search:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#66736C" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  user:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E5E3F" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.6c1.8.7 3 2.6 3.5 5.4"/></svg>',
+  phone:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E5E3F" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>',
+  ok:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#0E5E3F" stroke-width="2.6"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+};
+
+function filtered(){
+  const now = new Date(); now.setHours(0,0,0,0);
+  const week = new Date(now); week.setDate(week.getDate()+7);
+  return S.events.filter(e => {
+    if (S.q && !(e.name + e.venue + e.desc).toLowerCase().includes(S.q.toLowerCase())) return false;
+    const d = parseDate(e.date);
+    if (S.filter === '本周') return d && d >= now && d <= week;
+    if (S.filter === '免费') return isFree(e.fee);
+    return true;
+  });
+}
+
+function home(){
+  const list = filtered();
+  $('#app').innerHTML = `
+    <div class="top">
+      <div class="brand"><h1>${esc(BOOT.brand)}</h1><div class="dot">${esc((BOOT.brand||'活')[0])}</div></div>
+      <div class="search">${ICON.search}<input id="q" placeholder="搜索活动、地点" value="${esc(S.q)}" aria-label="搜索活动"></div>
+    </div>
+    <div class="chips">${['全部','本周','免费'].map(c=>`<button class="chip ${S.filter===c?'on':''}" data-f="${c}">${c}</button>`).join('')}</div>
+    <h2>即将举行</h2>
+    <div class="list">${list.length ? list.map(card).join('') : ''}</div>
+    ${list.length ? '' : `<div class="empty">${S.events.length ? '没有符合条件的活动。' : '目前还没有开放报名的活动，迟点再来看看。'}</div>`}`;
+  $('#q').addEventListener('input', e => { S.q = e.target.value; const p = e.target.selectionStart; home(); const i=$('#q'); i.focus(); i.setSelectionRange(p,p); });
+  document.querySelectorAll('.chip').forEach(b => b.onclick = () => { S.filter = b.dataset.f; home(); });
+  document.querySelectorAll('.ev').forEach(b => b.onclick = () => detail(b.dataset.id));
+}
+
+function card(e){
+  const d = parseDate(e.date);
+  return `<div class="ev" tabindex="0" role="button" data-id="${esc(e.id)}">
+    <div class="cover" ${coverStyle(e)}>${coverStyle(e) ? '' : (d ? `<div class="d">${d.getDate()}</div><div class="m">${MONTHS[d.getMonth()]}</div>` : '<div class="d">★</div>')}</div>
+    <div class="body">
+      <div class="name">${esc(e.name)}</div>
+      <div class="meta">${ICON.cal}<span>${esc(e.date)} ${esc(e.time)}</span></div>
+      <div class="meta">${ICON.pin}<span>${esc(e.venue || '地点待定')}</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="tag ${isFree(e.fee)?'free':''}">${esc(feeText(e.fee))}</span>${seatTag(e)}</div>
+    </div></div>`;
+}
+function seatTag(e){
+  if (!e.cap) return '';
+  if (e.full) return '<span class="tag full">名额已满</span>';
+  return `<span class="tag ${e.left <= Math.max(3, e.cap * 0.1) ? 'few' : ''}">剩 ${e.left} 位</span>`;
+}
+function telHref(n){ return 'tel:' + String(n||'').replace(/[^\d+]/g,''); }
+function waHref(n, text){ let d = String(n||'').replace(/\D/g,''); if (d.startsWith('0')) d = '6' + d; return 'https://wa.me/' + d + (text ? '?text=' + encodeURIComponent(text) : ''); }
+
+function detail(id){
+  const e = S.events.find(x => x.id === id);
+  if (!e) { home(); return; }
+  S.ev = e; window.scrollTo(0,0);
+  $('#app').innerHTML = `
+    <div class="hero" ${coverStyle(e)}><button class="back" aria-label="返回" id="back">${ICON.back}</button></div>
+    <div class="sheet">
+      <span class="tag ${isFree(e.fee)?'free':''}">${esc(feeText(e.fee))}</span>
+      <h3>${esc(e.name)}</h3>
+      <div class="row"><div class="ic">${ICON.cal}</div><div><b>${esc(e.date)}</b><small>${esc(e.time || '时间待定')}</small></div></div>
+      <div class="row"><div class="ic">${ICON.pin}</div><div style="flex:1;min-width:0"><b>${esc(e.venue || '地点待定')}</b>${e.map ? `<a class="lnk" href="${esc(e.map)}" target="_blank" rel="noopener">在 Google 地图打开 ›</a>` : '<small>报名后会再通知详细资料</small>'}</div></div>
+      ${e.cap ? `<div class="row"><div class="ic">${ICON.user}</div><div><b>${e.full ? '名额已满' : `还剩 ${e.left} 个名额`}</b><small>限 ${e.cap} 人 · 已报名 ${e.taken} 人</small></div></div>` : ''}
+      ${e.contact ? `<div class="row"><div class="ic">${ICON.phone}</div><div style="flex:1;min-width:0"><b>有问题？联系主办方</b><small style="user-select:all">${esc(e.contact)}</small>
+        <div class="cbtns"><a class="btn sm wa" href="${esc(waHref(e.contact, '你好，我想问关于「' + e.name + '」的活动。'))}" target="_blank" rel="noopener">WhatsApp</a><a class="btn sm ghost" href="${esc(telHref(e.contact))}">打电话</a></div></div></div>` : ''}
+      ${e.desc ? `<div class="desc">${esc(e.desc)}</div>` : ''}
+    </div>
+    <div class="bar"><div class="in"><div class="price"><small>费用</small><b>${esc(feeText(e.fee))}</b></div><button class="btn" id="go" ${e.full ? 'disabled' : ''}>${e.full ? '名额已满' : '立即报名'}</button></div></div>`;
+  $('#back').onclick = home;
+  if (!e.full) $('#go').onclick = form;
+}
+
+function form(){
+  const e = S.ev; window.scrollTo(0,0);
+  let draft = {};
+  try { draft = JSON.parse(localStorage.getItem('reg_profile') || '{}'); } catch(_) {}
+  const v = k => esc(draft[k] || '');
+  $('#app').innerHTML = `
+    <div class="top"><div class="brand"><button class="back" style="position:static" id="back" aria-label="返回">${ICON.back}</button><h1 style="flex:1">填写报名资料</h1></div></div>
+    <div class="sheet" style="margin-top:0;border-radius:0;background:transparent">
+      <div class="hint">活动：<b>${esc(e.name)}</b></div>
+      <form id="f" novalidate>
+        <label>姓名 <i>*</i><input id="name" name="name" autocomplete="name" required value="${v('name')}"></label>
+        <label>电话 / WhatsApp <i>*</i><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="例如 012-345 6789" required value="${v('phone')}"></label>
+        <label>公司名称<input id="company" name="company" autocomplete="organization" value="${v('company')}"></label>
+        <label>职位<input id="title" name="title" autocomplete="organization-title" placeholder="例如 老板 / 董事 / 经理" value="${v('title')}"></label>
+        <label>电邮<input id="email" name="email" type="email" autocomplete="email" value="${v('email')}"></label>
+        <label>行业<input id="industry" name="industry" placeholder="例如 餐饮、制造、零售" value="${v('industry')}"></label>
+        <label>这次最想了解什么？<textarea id="note" name="note" rows="3"></textarea></label>
+        <div class="err" id="err" role="alert"></div>
+        <button class="btn block" id="submit" type="submit">确认报名</button>
+        <p class="hint">提交即表示你同意主办方通过 WhatsApp / 电邮联系你，跟进本活动相关事宜。</p>
+      </form>
+    </div>`;
+  $('#back').onclick = () => detail(e.id);
+  $('#f').onsubmit = ev => {
+    ev.preventDefault();
+    const d = Object.fromEntries(new FormData(ev.target).entries());
+    const digits = (d.phone||'').replace(/\D/g,'');
+    if (!d.name.trim()) return $('#err').textContent = '请填写姓名。';
+    if (digits.length < 9) return $('#err').textContent = '电话号码好像不完整，请再检查。';
+    if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return $('#err').textContent = '电邮格式不对。';
+    $('#err').textContent = '';
+    const btn = $('#submit'); btn.disabled = true; btn.textContent = '提交中…';
+    try { localStorage.setItem('reg_profile', JSON.stringify({name:d.name,phone:d.phone,company:d.company,title:d.title,email:d.email,industry:d.industry})); } catch(_) {}
+    d.eventId = e.id; d.source = BOOT.source; d.ref = BOOT.ref;
+    google.script.run
+      .withSuccessHandler(r => { S.reg = Object.assign({}, d, r); done(); })
+      .withFailureHandler(err => { btn.disabled = false; btn.textContent = '确认报名'; $('#err').textContent = (err && err.message) || '提交失败，请再试一次。'; })
+      .register(d);
+  };
+}
+
+// ===== 入场卡（带个人签到二维码）=====
+const ticketUrl = (id, key) => `${BOOT.url}?t=${encodeURIComponent(id)}&k=${encodeURIComponent(key)}`;
+const checkinUrl = (id, key) => `${BOOT.url}?c=${encodeURIComponent(id)}&k=${encodeURIComponent(key)}`;
+function ticketCard(t){
+  return `<div class="card">
+    <div class="nm">${esc(t.name)}</div><div class="tt">${esc(t.title || '')}</div>
+    <div class="co">${esc(t.company || '')}</div>
+    <div class="ft"><span>${esc(t.eventName)}</span><span>#${esc(t.id)}</span></div>
+    ${t.date ? `<div class="ln" style="margin-top:6px">${esc(t.date)} ${esc(t.time||'')} · ${esc(t.venue||'')}</div>` : ''}
+    <div class="qrbox" id="qr"></div>
+    <div class="qrcap">活动当天出示这个二维码签到</div>
+  </div>`;
+}
+function drawQR(text){
+  const el = document.getElementById('qr'); if (!el) return;
+  if (typeof QRCode === 'undefined'){ el.textContent = '#'; return; }
+  new QRCode(el, { text, width: 220, height: 220, colorDark:'#0E5E3F', correctLevel: QRCode.CorrectLevel.M });
+}
+function saveToWa(t){
+  return `https://wa.me/?text=${encodeURIComponent('我的入场卡：' + t.eventName + '\n' + ticketUrl(t.id, t.key))}`;
+}
+function ticketView(){
+  google.script.run
+    .withSuccessHandler(t => {
+      $('#app').innerHTML = `<div class="done">
+        ${t.checkin ? `<div class="tag" style="align-self:center">已签到 ${esc(t.checkin.slice(5,16))}</div>` : ''}
+        ${ticketCard(t)}
+        <div class="hint" style="margin:0">截图或收藏这一页，活动当天打开给工作人员扫。</div>
+        <a class="btn block ghost" style="text-decoration:none" href="${saveToWa(t)}">用 WhatsApp 发给自己保存</a></div>`;
+      drawQR(checkinUrl(t.id, t.key));
+    })
+    .withFailureHandler(err => { $('#app').innerHTML = `<div class="empty">${esc((err && err.message) || '载入失败')}</div>`; })
+    .getTicket(BOOT.ticket, BOOT.key);
+}
+
+// ===== 扫码签到（工作人员用手机相机扫入场卡）=====
+function scanView(pinArg){
+  let pin = pinArg || '';
+  if (!pin) { try { pin = localStorage.getItem('staff_pin') || ''; } catch(_) {} }
+  if (!pin) return pinView();
+  $('#app').innerHTML = '<div class="scan s-pin"><div><div class="big">签到中…</div></div></div>';
+  google.script.run
+    .withSuccessHandler(r => {
+      if (r.badPin){ try { localStorage.removeItem('staff_pin'); } catch(_) {} return pinView('密码不对，请再输入。'); }
+      const today = new Date(); const ymd = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      const wrongDay = r.eventDate && r.eventDate !== ymd;
+      $('#app').innerHTML = `<div class="scan ${r.already ? 's-dup' : 's-ok'}"><div>
+        <div class="tick">${r.already ? '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>' : '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'}</div>
+        <div class="big">${r.already ? '已经签到过了' : '签到成功'}</div>
+        ${r.already ? `<div class="sub">第一次签到：${esc(r.at.slice(5,16))}</div>` : ''}
+        <div class="who">${esc(r.name)}</div>
+        <div class="sub">${esc([r.title, r.company].filter(Boolean).join(' · '))}</div>
+        <div class="sub">${esc(r.eventName)}</div>
+        ${wrongDay ? `<div class="sub" style="background:rgba(0,0,0,.2);border-radius:10px;padding:8px 12px;margin-top:14px">注意：这张卡是 ${esc(r.eventDate)} 的活动</div>` : ''}
+        <div class="sub" style="margin-top:22px;opacity:.75">关掉这页，继续用相机扫下一位</div>
+      </div></div>`;
+    })
+    .withFailureHandler(err => { $('#app').innerHTML = `<div class="scan s-bad"><div><div class="big">签到失败</div><div class="sub">${esc((err && err.message) || '请再扫一次')}</div></div></div>`; })
+    .checkIn(BOOT.checkin, BOOT.key, pin);
+}
+function pinView(msg){
+  $('#app').innerHTML = `<div class="scan s-pin"><form id="pf" style="width:100%">
+    <div class="big">工作人员签到</div>
+    <div class="sub">${esc(msg || '第一次在这支手机扫码，请输入签到密码。之后同一支手机就不用再输入。')}</div>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" aria-label="签到密码" required>
+    <div><button class="btn" type="submit">确认</button></div>
+    <div class="sub" style="margin-top:18px;opacity:.75">如果你是参加者，请把这个二维码给工作人员扫。</div></form></div>`;
+  $('#pf').onsubmit = e => { e.preventDefault(); const v = $('#pin').value.trim(); if (!v) return; try { localStorage.setItem('staff_pin', v); } catch(_) {} scanView(v); };
+}
+function done(){
+  const r = S.reg, e = S.ev; window.scrollTo(0,0);
+  const wa = BOOT.organizer ? `https://wa.me/${BOOT.organizer}?text=${encodeURIComponent('你好，我刚报名了「' + e.name + '」，我是 ' + r.name + '（报名编号 ' + r.id + '）。')}` : '';
+  $('#app').innerHTML = `
+    <div class="done">
+      <div class="ok">${ICON.ok}</div>
+      <div><h2 style="margin:0 0 6px">报名成功！</h2><div class="hint" style="margin:0">我们会通过 WhatsApp 联系你确认。</div></div>
+      ${ticketCard(Object.assign({}, r, { eventName:e.name, date:e.date, time:e.time, venue:e.venue }))}
+      <div class="hint" style="margin:0">这是你的入场卡。截图保存，或发到自己的 WhatsApp，活动当天给工作人员扫码签到。</div>
+      <a class="btn block" style="text-decoration:none;background:#1FA855" href="${saveToWa(Object.assign({}, r, { eventName:e.name }))}">用 WhatsApp 发给自己保存</a>
+      ${wa ? `<a class="btn block" style="text-decoration:none" href="${wa}">WhatsApp 主办方</a>` : ''}
+      <button class="btn ghost block" id="home">看看其他活动</button>
+    </div>`;
+  $('#home').onclick = home;
+  drawQR(checkinUrl(r.id, r.key));
+}
+
+// ===== 会后问卷（链接带 ?f=活动ID）=====
+function feedback(ev){
+  let draft = {};
+  try { draft = JSON.parse(localStorage.getItem('reg_profile') || '{}'); } catch(_) {}
+  let rating = 0;
+  const NEXT = ['想约一对一详谈','想参加进阶课程/下一场活动','想了解合作/投资机会','暂时不用，有活动再通知我'];
+  $('#app').innerHTML = `
+    <div class="top"><div class="brand"><h1>${esc(BOOT.brand)}</h1><div class="dot">${esc((BOOT.brand||'活')[0])}</div></div>
+      <div style="margin-top:14px;font-size:15px;opacity:.9">谢谢你出席</div><div style="font-size:20px;font-weight:900;margin-top:2px">${esc(ev.name)}</div></div>
+    <div class="sheet" style="margin-top:0;border-radius:0;background:transparent">
+      <form id="fb" novalidate>
+        <label>整体评分 <i>*</i>
+          <div id="stars" style="display:flex;gap:6px" role="radiogroup" aria-label="评分">${[1,2,3,4,5].map(n=>`<button type="button" class="chip" data-r="${n}" role="radio" aria-checked="false">${n} ★</button>`).join('')}</div></label>
+        <label>姓名<input name="name" value="${esc(draft.name||'')}"></label>
+        <label>电话 / WhatsApp <i>*</i><input name="phone" type="tel" inputmode="tel" value="${esc(draft.phone||'')}" placeholder="用报名时的号码"></label>
+        <label>今天最大的收获是什么？<textarea name="gain" rows="3"></textarea></label>
+        <label>有什么可以做得更好？<textarea name="improve" rows="2"></textarea></label>
+        <label>接下来你想要？<select name="next"><option value="">请选择</option>${NEXT.map(x=>`<option>${x}</option>`).join('')}</select></label>
+        <div class="err" id="err" role="alert"></div>
+        <button class="btn block" id="submit" type="submit">提交</button>
+      </form>
+    </div>`;
+  document.querySelectorAll('#stars .chip').forEach(b => b.onclick = () => {
+    rating = +b.dataset.r;
+    document.querySelectorAll('#stars .chip').forEach(x => { const on = +x.dataset.r <= rating; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(+x.dataset.r === rating)); });
+  });
+  $('#fb').onsubmit = e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    if (!rating) return $('#err').textContent = '请先给个评分。';
+    if ((d.phone||'').replace(/\D/g,'').length < 9) return $('#err').textContent = '请填写报名时用的电话号码。';
+    d.rating = rating; d.eventId = ev.id;
+    const btn = $('#submit'); btn.disabled = true; btn.textContent = '提交中…';
+    google.script.run
+      .withSuccessHandler(() => { $('#app').innerHTML = `<div class="done"><div class="ok">${ICON.ok}</div><h2 style="margin:0">收到，谢谢你！</h2><div class="hint" style="margin:0">你的意见我们会认真看。</div></div>`; })
+      .withFailureHandler(err => { btn.disabled = false; btn.textContent = '提交'; $('#err').textContent = (err && err.message) || '提交失败，请再试一次。'; })
+      .submitFeedback(d);
+  };
+}
+
+if (BOOT.checkin && BOOT.key) scanView();
+else if (BOOT.ticket && BOOT.key) ticketView();
+else if (BOOT.feedbackId) {
+  google.script.run
+    .withSuccessHandler(ev => { if (ev) feedback(ev); else $('#app').innerHTML = '<div class="empty">找不到这个活动的问卷。</div>'; })
+    .withFailureHandler(() => { $('#app').innerHTML = '<div class="empty">载入失败，请刷新页面。</div>'; })
+    .getEventForFeedback(BOOT.feedbackId);
+} else google.script.run
+  .withSuccessHandler(list => {
+    S.events = list || [];
+    if (BOOT.eventId && S.events.some(x => x.id === BOOT.eventId)) detail(BOOT.eventId); else home();
+  })
+  .withFailureHandler(() => { $('#app').innerHTML = '<div class="empty">载入失败，请刷新页面。</div>'; })
+  .getEvents();
+</script>
+</body>
+</html>

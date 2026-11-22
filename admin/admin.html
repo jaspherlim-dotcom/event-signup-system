@@ -1,0 +1,1053 @@
+<title>活动跟进后台</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* 布局：手机 app 结构，深绿顶栏 + 白卡片 + 底部导航；联系人详情是全屏面板 */
+:root{
+  --brand:#0E5E3F; --brand-2:#13804F; --brand-soft:#E5F2EA; --on-brand:#FFFFFF;
+  --bg:#F3F5F4; --card:#FFFFFF; --ink:#16201B; --muted:#65726B; --line:#E0E6E2;
+  --gold:#F2B33D; --gold-soft:#FFF3DA; --gold-ink:#8A5300;
+  --red:#C4412D; --red-soft:#FCE9E5; --blue:#2F6FB5; --blue-soft:#E6F0FA;
+  --font:'Noto Sans SC',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  --r:16px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --brand:#1F8A5C; --brand-2:#27A06C; --brand-soft:#173327; --bg:#0E1512; --card:#18211D; --ink:#E7EEEA; --muted:#97A59D; --line:#26332D;
+  --gold-soft:#3A2E14; --gold-ink:#F2C46A; --red-soft:#3A1C17; --blue-soft:#172838; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --brand:#1F8A5C; --brand-2:#27A06C; --brand-soft:#173327; --bg:#0E1512; --card:#18211D; --ink:#E7EEEA; --muted:#97A59D; --line:#26332D;
+  --gold-soft:#3A2E14; --gold-ink:#F2C46A; --red-soft:#3A1C17; --blue-soft:#172838; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--brand)}
+button,input,textarea,select{font:inherit;color:inherit}
+.app{max-width:720px;margin:0 auto;padding-bottom:96px}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:linear-gradient(160deg,var(--brand),#0A4630);color:var(--on-brand);padding-block:18px 20px;border-radius:0 0 24px 24px;margin-top:calc(-1 * env(safe-area-inset-top,0px));padding-top:calc(env(safe-area-inset-top,0px) + 18px)}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hrow h1{font-size:20px;font-weight:900;margin:0}
+.hrow small{opacity:.8;font-size:13px}
+.iconbtn{border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:12px;padding:8px 12px;cursor:pointer;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+.tile{background:rgba(255,255,255,.12);border-radius:14px;padding:10px 8px;text-align:center;cursor:pointer;border:0;color:#fff}
+.tile b{display:block;font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
+.tile span{font-size:12px;opacity:.85}
+h2{font-size:17px;font-weight:900;margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+h2 .count{font-size:12px;font-weight:700;background:var(--brand-soft);color:var(--brand);border-radius:999px;padding:2px 8px}
+.list{display:grid;gap:10px}
+.item{background:var(--card);border-radius:var(--r);padding:12px 14px;display:grid;grid-template-columns:42px 1fr auto;gap:12px;align-items:center;cursor:pointer;border:1px solid var(--line);text-align:left;width:100%}
+.item:focus-visible,.btn:focus-visible,.chip:focus-visible,.tile:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.av{width:42px;height:42px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-weight:900}
+.item .who{min-width:0}
+.item .who b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .who small{color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pills{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.pill{font-size:12px;font-weight:700;border-radius:8px;padding:3px 8px;white-space:nowrap}
+.p-new{background:var(--blue-soft);color:var(--blue)}
+.p-wait{background:var(--brand-soft);color:var(--brand)}
+.p-due{background:var(--gold-soft);color:var(--gold-ink)}
+.p-late{background:var(--red-soft);color:var(--red)}
+.p-done{background:var(--line);color:var(--muted)}
+.p-paid{background:var(--brand);color:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-block:12px 4px;scrollbar-width:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 13px;font-size:14px;cursor:pointer}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.field{display:grid;gap:6px;font-size:14px;font-weight:500}
+input,textarea,select{border:1px solid var(--line);border-radius:12px;padding:11px 13px;background:var(--card);width:100%;min-width:0}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--brand-2);border-color:transparent}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;font-size:14px}
+.btn.wa{background:#1FA855}
+.btn.soft{background:var(--brand-soft);color:var(--brand)}
+.btn.line{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn.sm{padding:7px 11px;font-size:13px;border-radius:10px}
+.btn:disabled{opacity:.55;cursor:default}
+.box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.empty{background:var(--card);border:1px dashed var(--line);border-radius:var(--r);padding:20px;text-align:center;color:var(--muted);line-height:1.7}
+.note{font-size:13px;color:var(--muted);line-height:1.6}
+.banner{background:var(--gold-soft);color:var(--gold-ink);border-radius:12px;padding:10px 12px;font-size:14px;margin-top:12px;line-height:1.6}
+.banner.err{background:var(--red-soft);color:var(--red)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs button{border:0;background:transparent;padding:9px 0 8px;display:grid;justify-items:center;gap:2px;font-size:12px;color:var(--muted);cursor:pointer}
+nav.tabs button.on{color:var(--brand);font-weight:700}
+nav.tabs svg{width:22px;height:22px}
+.ev{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.ev .hd{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:12px 14px;align-items:center}
+.date{background:var(--brand);color:#fff;border-radius:12px;text-align:center;padding:8px 0}
+.date b{display:block;font-size:22px;font-weight:900;line-height:1}
+.date span{font-size:11px;letter-spacing:1px}
+.ev .stats,.mcard .stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.ev .stats div,.mcard .stats div{padding:8px 4px;text-align:center;font-size:12px;color:var(--muted)}
+.ev .stats b,.mcard .stats b{display:block;color:var(--ink);font-size:17px;font-variant-numeric:tabular-nums}
+.ev .acts,.mcard .acts{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px 14px}
+.link{font-size:13px;background:var(--bg);border-radius:10px;padding:8px 10px;word-break:break-all;margin:0 14px;user-select:all}
+/* 详情面板 */
+.panel{position:fixed;inset:0;background:var(--bg);z-index:20;overflow-y:auto;padding-bottom:40px}
+.panel .bar{position:sticky;top:0;z-index:2;background:var(--bg);padding-block:calc(env(safe-area-inset-top,0px) + 10px) 10px;display:flex;align-items:center;gap:10px}
+.back{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;cursor:pointer;flex:none}
+.inner{max-width:720px;margin:0 auto}
+.ncard{border-radius:20px;padding:20px;color:#fff;background:linear-gradient(140deg,#0E5E3F 0%,#13804F 60%,#2A9D63 100%);position:relative;overflow:hidden}
+.ncard:after{content:"";position:absolute;right:-50px;top:-50px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.08)}
+.ncard .nm{font-size:23px;font-weight:900}
+.ncard .tt{opacity:.85}
+.ncard .co{font-weight:700;margin-top:12px}
+.ncard .ln{font-size:14px;opacity:.92;margin-top:3px;word-break:break-all;user-select:all}
+.ncard .ft{margin-top:14px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.35);font-size:13px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.qa{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-top:12px}
+.steps{display:grid;gap:0}
+.step{display:grid;grid-template-columns:28px 1fr;gap:12px;position:relative;padding-bottom:16px}
+.step:not(:last-child):before{content:"";position:absolute;left:13px;top:28px;bottom:0;width:2px;background:var(--line)}
+.dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;background:var(--line);color:var(--muted)}
+.dot.ok{background:var(--brand);color:#fff}
+.dot.due{background:var(--gold);color:#3b2600}
+.dot.late{background:var(--red);color:#fff}
+.step b{display:block}
+.step .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.mcard .acts{padding:0}
+.mcard .av{width:44px;height:44px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-weight:900;font-size:18px}
+.memo{border-left:3px solid var(--brand-soft);padding:2px 0 2px 12px;margin-bottom:12px}
+.memo .k{font-size:12px;color:var(--muted)}
+.memo p{margin:3px 0 0;white-space:pre-wrap;line-height:1.6}
+.toggle{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer}
+.toggle input{width:22px;height:22px;accent-color:var(--brand)}
+.ai{background:linear-gradient(180deg,var(--brand-soft),var(--card));border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.ai ol{margin:6px 0 0;padding-left:20px;line-height:1.7}
+.ai .draft{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;white-space:pre-wrap;line-height:1.6;margin-top:8px}
+.heat{display:flex;gap:8px}
+.stack{display:grid;gap:12px}
+.arow{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.arow .who{min-width:0}.arow .who b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.arow .who small{color:var(--muted);font-size:12px}
+.arow .acts{display:flex;gap:6px}
+.ci{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.ci.in{border-color:var(--brand);background:var(--brand-soft)}
+.cibtn{min-width:92px;padding:12px 14px;font-size:15px}
+.qr{background:#fff;padding:12px;border-radius:14px;display:inline-grid;place-items:center;border:1px solid var(--line)}
+.qr img,.qr canvas{display:block;max-width:100%;height:auto}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+.tbl table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums;min-width:560px}
+.tbl th,.tbl td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left;white-space:normal;min-width:140px}
+.tbl th{color:var(--muted);font-weight:500;font-size:12px}
+.funnel{display:grid;gap:8px}
+.fbar{display:grid;grid-template-columns:64px 1fr 72px;gap:10px;align-items:center;font-size:13px}
+.fbar .track{height:22px;background:var(--bg);border-radius:6px;overflow:hidden}
+.fbar .fill{height:100%;background:var(--brand-2);border-radius:6px;min-width:2px}
+.fbar b{text-align:right;font-variant-numeric:tabular-nums}
+.big{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.big .box b{display:block;font-size:22px;font-weight:900;font-variant-numeric:tabular-nums}
+.big .box span{font-size:12px;color:var(--muted)}
+@media (max-width:420px){.big{grid-template-columns:repeat(2,1fr)}}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:40}
+@media (max-width:420px){.tiles{grid-template-columns:repeat(2,1fr)}.qa{grid-template-columns:1fr 1fr}.qa .btn.wa{grid-column:1/-1}}
+@media (prefers-reduced-motion:no-preference){.item,.tile{transition:transform .12s}.item:active,.tile:active{transform:scale(.985)}}
+</style>
+
+<div class="app" id="app">
+  <header class="top gut">
+    <div class="hrow"><div><h1>活动跟进后台</h1><small id="sub">只有你看得到这一页</small></div>
+      <button class="iconbtn" id="refresh" type="button" aria-label="重新读取报名资料">↻ 刷新</button></div>
+    <div class="tiles" id="tiles"></div>
+  </header>
+  <main class="gut" id="main"><div class="empty" style="margin-top:16px">正在连接资料库…</div></main>
+</div>
+<nav class="tabs" aria-label="主导航"><div class="in" id="tabs"></div></nav>
+<div id="panelHost"></div>
+
+<script>
+// ===== 基本工具 =====
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DAY = 86400000;
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const sod = t => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
+const fmtD = t => { const d = new Date(t); return `${d.getDate()}/${d.getMonth()+1}`; };
+const fmtDT = t => { const d = new Date(t); return `${d.getDate()}/${d.getMonth()+1} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+function toast(m){ const t = document.createElement('div'); t.className='toast'; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
+function waNum(p){ let d = String(p||'').replace(/\D/g,''); if (d.startsWith('0')) d = '6' + d; else if (/^1\d{8,9}$/.test(d)) d = '60' + d; return d; }
+function waLink(p, text){ return `https://wa.me/${waNum(p)}${text ? '?text=' + encodeURIComponent(text) : ''}`; }
+function parseDate(s){ const m = String(s||'').match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; }
+async function copy(text){ try { await navigator.clipboard.writeText(text); toast('已复制'); } catch(_) { toast('复制不了，请长按文字手动复制'); } }
+
+const DEFAULT_T = {
+  t1: '你好 {name}，我是 Jaspher。谢谢你报名「{event}」！想跟你确认一下出席，也想了解你这次最想收获什么？\n\n你的入场卡（活动当天出示二维码签到）：{ticket}',
+  t4: 'Hi {name}，上次跟你聊到「{event}」，想跟进一下你那边考虑得怎样？有什么问题我可以帮你解答。',
+  t7: '{name} 你好，最后跟进一下「{event}」。如果现在时机不对也没关系，之后有合适的活动我再通知你。',
+  t0: 'Hi {name}，提醒你明天的「{event}」：\n日期：{date} {time}\n地点：{venue}\n地图：{map}\n入场卡：{ticket}\n到时见！有任何问题随时 WhatsApp 我。',
+  tt: '{name}，谢谢你今天来「{event}」！花1分钟帮我填个简单问卷，让下一场做得更好：\n{link}'
+};
+const TPL_NAMES = { t1:'第1天 · 首次联系', t4:'第4天 · 跟进', t7:'第7天 · 最后跟进', t0:'活动前提醒', tt:'会后感谢 + 问卷' };
+const DEALS = ['潜在','洽谈中','已成交','流失'];
+const SOURCES = [['fb','Facebook'],['wa','WhatsApp群'],['ig','Instagram'],['xhs','小红书'],['ref','朋友介绍'],['email','电邮']];
+const SRC_NAME = Object.assign(Object.fromEntries(SOURCES), { card:'邀请卡', walkin:'现场报名' });
+
+// ===== 状态 =====
+const S = { tab:'today', filter:'全部', evFilter:'', refFilter:'', q:'', team:[], tlogs:{}, teamAI:null, teamAIBusy:false, cfg:{}, crm:{}, events:[], regs:[], feedback:[], sub:null, ciq:'', loaded:false, sheetErr:'', db:null, mcp:null, sample:null, open:null, dbReady:false };
+const tpl = k => (S.cfg.templates && S.cfg.templates[k]) || DEFAULT_T[k];
+function fill(t, r){
+  const ev = S.events.find(e => e.id === r.eventId) || {};
+  const map = { name:r.name, event:r.eventName || ev.name, date:ev.date, time:ev.time, venue:ev.venue, map:mapLink(ev), link:fbUrl(r.eventId), ticket:ticketUrl(r) };
+  return t.replace(/\{(name|event|date|time|venue|map|link|ticket)\}/g, (_, k) => map[k] || '');
+}
+const pkey = p => waNum(p).slice(-9);
+function history(r){ const k = pkey(r.phone); return S.regs.filter(x => x.id !== r.id && pkey(x.phone) === k); }
+function fbFor(r){ const k = pkey(r.phone); return S.feedback.filter(f => f.eventId === r.eventId && pkey(f.phone) === k); }
+function isAtt(id){ const c = S.crm[id] || {}; if (c.attended !== undefined) return !!c.attended; const r = S.regs.find(x => x.id === id); return !!(r && r.checkin); }
+function checkinText(r){ const c = S.crm[r.id] || {}; return c.checkinAt ? fmtDT(c.checkinAt) : (r.checkin ? r.checkin.slice(5,16) : ''); }
+function ticketUrl(r){ return baseUrl() && r.key ? baseUrl() + '?t=' + encodeURIComponent(r.id) + '&k=' + encodeURIComponent(r.key) : ''; }
+function mapLink(e){ return /^https:\/\//.test(e.mapUrl||'') ? e.mapUrl : (e.venue ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(e.venue) : ''); }
+function baseUrl(){ return S.cfg.webAppUrl ? S.cfg.webAppUrl.replace(/[?#].*$/,'') : ''; }
+function fbUrl(evId){ return baseUrl() ? baseUrl() + '?f=' + encodeURIComponent(evId) : ''; }
+function money(n){ return 'RM ' + (Math.round(n) || 0).toLocaleString('en-MY'); }
+const num = v => parseFloat(String(v||'').replace(/[^\d.]/g,'')) || 0;
+// ===== 团队 =====
+const member = code => S.team.find(m => m.code === code);
+const refName = r => { const m = r.ref && member(r.ref); return m ? m.name : (r.ref || ''); };
+const teamUrl = () => baseUrl() ? baseUrl() + '?team' : '';
+const refUrl = (e, code) => baseUrl() ? baseUrl() + '?e=' + encodeURIComponent(e.id) + '&r=' + encodeURIComponent(code) : '';
+const tlogsOf = id => (S.tlogs[id] || []).filter(l => l.kind !== 'AI建议');
+function memberStats(code){
+  const rs = S.regs.filter(r => r.ref === code), c = r => S.crm[r.id] || {};
+  return { n:rs.length, contacted:rs.filter(r => fu(r).firstAt).length,
+    att:rs.filter(r => isAtt(r.id)).length, paid:rs.filter(r => c(r).paid).length, won:rs.filter(r => c(r).deal==='已成交').length,
+    rev:rs.reduce((t,r) => t + (c(r).paid ? num(c(r).payAmount) : 0), 0), deal:rs.reduce((t,r) => t + (c(r).deal==='已成交' ? num(c(r).dealValue) : 0), 0),
+    notes:rs.reduce((t,r) => t + tlogsOf(r.id).length, 0) };
+}
+
+// ===== 147 法则 =====
+// 第1天 = 首次联系当天；第4天 = 首次联系后 +3 天；第7天 = +6 天
+// 推荐人在团队页记录的联系，也算进 147（避免你和成员重复联系）
+const parseAt = v => { const m = String(v||'').match(/(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/); return m ? new Date(+m[1], +m[2]-1, +m[3], +(m[4]||0), +(m[5]||0)).getTime() : 0; };
+function teamAt(id, kind){ const t = (S.tlogs[id] || []).filter(l => l.kind === kind).map(l => parseAt(l.at)).filter(Boolean); return t.length ? Math.min.apply(null, t) : 0; }
+function fu(r){ const c = S.crm[r.id] || {}; return { firstAt:c.firstAt || teamAt(r.id,'首次联系'), fu4At:c.fu4At || teamAt(r.id,'第4天跟进'), fu7At:c.fu7At || teamAt(r.id,'第7天跟进') }; }
+function stage(r){
+  const c = fu(r);
+  const today = sod(Date.now());
+  if (!c.firstAt) return { key:'new', label:'未联系', cls:'p-new', due:false, rank:1 };
+  const d4 = sod(c.firstAt) + 3*DAY, d7 = sod(c.firstAt) + 6*DAY;
+  if (!c.fu4At){
+    if (today > d4) return { key:'fu4', label:`第4天跟进 · 逾期${Math.round((today-d4)/DAY)}天`, cls:'p-late', due:true, rank:0, dueAt:d4 };
+    if (today === d4) return { key:'fu4', label:'今天跟进（第4天）', cls:'p-due', due:true, rank:0, dueAt:d4 };
+    return { key:'wait4', label:`${fmtD(d4)} 第4天跟进`, cls:'p-wait', due:false, rank:2, dueAt:d4 };
+  }
+  if (!c.fu7At){
+    if (today > d7) return { key:'fu7', label:`第7天跟进 · 逾期${Math.round((today-d7)/DAY)}天`, cls:'p-late', due:true, rank:0, dueAt:d7 };
+    if (today === d7) return { key:'fu7', label:'今天跟进（第7天）', cls:'p-due', due:true, rank:0, dueAt:d7 };
+    return { key:'wait7', label:`${fmtD(d7)} 第7天跟进`, cls:'p-wait', due:false, rank:2, dueAt:d7 };
+  }
+  return { key:'done', label:'147 完成', cls:'p-done', due:false, rank:3 };
+}
+
+// ===== 资料读取 =====
+function vals(res){ const p = res && res.payload; if (!p) return []; return p.values || (p.content && p.content.values) || []; }
+async function loadSheet(force){
+  if (!S.cfg.sheetId){ S.loaded = true; render(); return; }
+  if (!S.mcp){ S.sheetErr = '没办法连到 Google Sheets。请确认 Claude 已连接 Google Sheets，然后刷新这页。'; S.loaded = true; render(); return; }
+  const opts = force ? { cache:{ refresh:true } } : { cache:{ staleTime:60000, gcTime:600000 } };
+  try {
+    const [e, r] = await Promise.all([
+      S.mcp.callTool('Google Sheets','get_values',{ spreadsheetId:S.cfg.sheetId, range:'Events!A2:M' }, opts),
+      S.mcp.callTool('Google Sheets','get_values',{ spreadsheetId:S.cfg.sheetId, range:'Registrations!A2:O' }, opts)
+    ]);
+    S.events = vals(e).map((x,i) => ({ row:i+2, id:x[0], name:x[1]||'', date:x[2]||'', time:x[3]||'', venue:x[4]||'', desc:x[5]||'', fee:x[6]||'', cover:x[7]||'', status:x[8]||'开放', created:x[9]||'', cap:parseInt(x[10],10)||0, mapUrl:x[11]||'', contact:(x[12]||'').replace(/[^\d+]/g,'') })).filter(x => x.id);
+    S.regs = vals(r).map(x => ({ id:x[0], at:x[1]||'', eventId:x[2]||'', eventName:x[3]||'', name:x[4]||'', company:x[5]||'', title:x[6]||'', phone:x[7]||'', email:x[8]||'', industry:x[9]||'', note:x[10]||'', source:x[11]||'', checkin:x[12]||'', key:x[13]||'', ref:String(x[14]||'').toUpperCase() })).filter(x => x.id && /^[A-Za-z0-9_-]+$/.test(x.id)).reverse();
+    S.sheetErr = '';
+    try {
+      const f = await S.mcp.callTool('Google Sheets','get_values',{ spreadsheetId:S.cfg.sheetId, range:'Feedback!A2:I' }, opts);
+      S.feedback = vals(f).map(x => ({ at:x[0]||'', eventId:x[1]||'', eventName:x[2]||'', name:x[3]||'', phone:x[4]||'', rating:+x[5]||0, gain:x[6]||'', improve:x[7]||'', next:x[8]||'' })).filter(x => x.eventId);
+    } catch(_) { S.feedback = []; }
+    try {
+      const [tm, tf] = await Promise.all([
+        S.mcp.callTool('Google Sheets','get_values',{ spreadsheetId:S.cfg.sheetId, range:'Team!A2:F' }, opts),
+        S.mcp.callTool('Google Sheets','get_values',{ spreadsheetId:S.cfg.sheetId, range:'TeamFollow!A2:E' }, opts)
+      ]);
+      S.team = vals(tm).map((x,i) => ({ row:i+2, code:String(x[0]||'').trim().toUpperCase(), name:x[1]||'', phone:x[2]||'', pin:String(x[3]||''), active:String(x[4]||'').trim() !== '停用', created:x[5]||'' })).filter(m => m.code);
+      const tl = {}; vals(tf).forEach(x => { if (x[1]) (tl[x[1]] = tl[x[1]] || []).push({ at:x[0]||'', code:String(x[2]||'').toUpperCase(), kind:x[3]||'', text:x[4]||'' }); });
+      S.tlogs = tl;
+    } catch(_) { S.team = []; S.tlogs = {}; }
+  } catch(err){
+    S.sheetErr = err && err.code === 'not_granted' ? '你还没允许这页使用 Google Sheets。按「刷新」再试，出现提示时选允许。' : `读取报名表失败（${esc(err && (err.code || err.message) || '未知')}）。按「刷新」再试。`;
+  }
+  S.loaded = true; render();
+}
+
+// ===== 写入（每个联系人一次一笔）=====
+const chains = {};
+function saveCrm(id, patch){
+  S.crm[id] = Object.assign({}, S.crm[id] || {}, patch, { updatedAt: Date.now() });
+  const data = S.crm[id];
+  render();
+  chains[id] = (chains[id] || Promise.resolve()).then(() => S.db.doc('crm/' + id).set(data)).catch(() => toast('保存失败，请检查网络'));
+  return chains[id];
+}
+function addMemo(id, kind, text, extra){
+  const c = S.crm[id] || {};
+  const memos = (c.memos || []).concat([{ at: Date.now(), kind, text: (text||'').trim() }]);
+  return saveCrm(id, Object.assign({ memos }, extra || {}));
+}
+
+// ===== 画面 =====
+const ICONS = {
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.6c1.8.7 3 2.6 3.5 5.4"/></svg>',
+  events:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  set:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>'
+};
+function renderTabs(){
+  const T = [['today','今日'],['list','名单'],['events','活动'],['stats','数据'],['set','设置']];
+  $('#tabs').innerHTML = T.map(([k,l]) => `<button type="button" class="${S.tab===k?'on':''}" data-t="${k}">${ICONS[k]}<span>${l}</span></button>`).join('');
+  $('#tabs').querySelectorAll('button').forEach(b => b.onclick = () => { S.tab = b.dataset.t; window.scrollTo(0,0); render(); });
+}
+function renderTiles(){
+  const st = S.regs.map(r => [r, stage(r)]);
+  const n = { all:S.regs.length, fresh:st.filter(([,s])=>s.key==='new').length, due:st.filter(([,s])=>s.due).length, paid:S.regs.filter(r=>(S.crm[r.id]||{}).paid).length };
+  $('#tiles').innerHTML = [['all','报名','全部'],['fresh','未联系','未联系'],['due','要跟进','今日跟进'],['paid','已付款','已付款']]
+    .map(([k,l,f]) => `<button type="button" class="tile" data-f="${f}"><b>${n[k]}</b><span>${l}</span></button>`).join('');
+  $('#tiles').querySelectorAll('.tile').forEach(b => b.onclick = () => { S.tab='list'; S.filter=b.dataset.f; S.evFilter=''; render(); });
+}
+function itemHTML(r){
+  const s = stage(r), c = S.crm[r.id] || {};
+  const ini = (r.name||'?').trim().slice(0,1).toUpperCase();
+  const back = history(r).length;
+  return `<button type="button" class="item" data-id="${esc(r.id)}"><div class="av">${esc(ini)}</div>
+    <div class="who"><b>${esc(r.name)}${back ? ` <span class="pill p-new" style="font-size:11px">回头客 ×${back+1}</span>` : ''}</b><small>${esc([r.company, r.title].filter(Boolean).join(' · ') || r.phone)}</small><small>${esc(r.eventName)}${r.ref ? ` · 推荐：${esc(refName(r))}` : ''}</small></div>
+    <div class="pills"><span class="pill ${s.cls}">${esc(s.label)}</span>${c.paid ? '<span class="pill p-paid">已付款</span>' : ''}${c.deal && c.deal!=='潜在' ? `<span class="pill ${c.deal==='已成交'?'p-paid':c.deal==='流失'?'p-done':'p-due'}">${esc(c.deal)}</span>` : ''}${c.heat ? `<span class="pill p-done">${esc(c.heat)}</span>` : ''}</div></button>`;
+}
+function bindItems(root){ root.querySelectorAll('.item').forEach(b => b.onclick = () => openContact(b.dataset.id)); }
+
+function banners(){
+  let h = '';
+  if (S.sheetErr) h += `<div class="banner err">${S.sheetErr}</div>`;
+  if (S.dbReady && !S.cfg.sheetId) h += `<div class="banner">还没设定报名资料表。去「设置」填入 Google Sheet ID。</div>`;
+  if (S.dbReady && S.cfg.sheetId && !S.cfg.webAppUrl) h += `<div class="banner">还没填报名页网址，报名链接、二维码和问卷链接暂时生成不了。去「设置」填入。</div>`;
+  return h;
+}
+
+// 一行「快速动作」：WhatsApp + 标记完成
+function actionRow(r, tplKey, flag, doneLabel){
+  return `<div class="arow"><div class="who"><b>${esc(r.name)}</b><small>${esc(r.company || r.phone)}</small></div>
+    <div class="acts"><a class="btn sm wa" href="${esc(waLink(r.phone, fill(tpl(tplKey), r)))}" target="_blank" rel="noopener">WhatsApp</a>
+    <button type="button" class="btn sm soft" data-flag="${flag}" data-id="${esc(r.id)}">${doneLabel}</button></div></div>`;
+}
+function viewToday(){
+  const today = sod(Date.now());
+  const st = S.regs.map(r => [r, stage(r)]);
+  const due = st.filter(([,s]) => s.due).sort((a,b) => (a[1].dueAt||0) - (b[1].dueAt||0));
+  const fresh = st.filter(([,s]) => s.key === 'new');
+  const unpaid = S.regs.filter(r => { const c = S.crm[r.id]||{}; return fu(r).firstAt && !c.paid && c.deal !== '流失'; });
+  const evDay = e => { const d = parseDate(e.date); return d ? Math.round((d.getTime() - today)/DAY) : null; };
+  const soon = S.events.filter(e => { const n = evDay(e); return n !== null && n >= 0 && n <= 2; });
+  const remind = S.regs.filter(r => soon.some(e => e.id === r.eventId) && !(S.crm[r.id]||{}).remindAt && (S.crm[r.id]||{}).deal !== '流失');
+  const past = S.events.filter(e => { const n = evDay(e); return n !== null && n < 0 && n >= -7; });
+  const thank = S.regs.filter(r => past.some(e => e.id === r.eventId) && !(S.crm[r.id]||{}).thankAt).sort((a,b) => (+!!isAtt(b.id)) - (+!!isAtt(a.id)));
+  const hotFb = S.feedback.filter(f => /一对一|进阶|合作|投资/.test(f.next)).map(f => S.regs.find(r => r.eventId === f.eventId && pkey(r.phone) === pkey(f.phone))).filter(r => r && !['已成交','流失'].includes((S.crm[r.id]||{}).deal));
+  const up = S.events.filter(e => { const n = evDay(e); return n !== null && n >= 0; }).sort((a,b) => parseDate(a.date) - parseDate(b.date));
+  return banners() + `
+    ${today && soon.length ? `<h2>活动快到了，发提醒 <span class="count">${remind.length}</span></h2>
+      <p class="note" style="margin:-4px 0 10px">${soon.map(e => `${esc(e.name)}（${evDay(e)===0?'今天':evDay(e)===1?'明天':'后天'}）`).join('、')}</p>
+      ${remind.length ? `<div class="list">${remind.map(r => actionRow(r,'t0','remindAt','已提醒')).join('')}</div>` : '<div class="empty">全部都提醒过了。</div>'}` : ''}
+    ${hotFb.length ? `<h2>问卷里说想进一步谈 <span class="count">${hotFb.length}</span></h2><div class="list">${hotFb.map(itemHTML).join('')}</div>` : ''}
+    <h2>今天要跟进 <span class="count">${due.length}</span></h2>
+    ${due.length ? `<div class="list">${due.map(([r]) => itemHTML(r)).join('')}</div>` : `<div class="empty">今天没有到期的跟进。第4天、第7天到了会自动出现在这里。</div>`}
+    <h2>新报名，还没联系 <span class="count">${fresh.length}</span></h2>
+    ${fresh.length ? `<div class="list">${fresh.slice(0,8).map(([r]) => itemHTML(r)).join('')}</div>${fresh.length>8?`<p class="note">还有 ${fresh.length-8} 位，去「名单」看全部。</p>`:''}` : `<div class="empty">${S.regs.length ? '全部都联系过了。' : '还没有人报名。去「活动」开一个活动，把报名链接发出去。'}</div>`}
+    ${past.length ? `<h2>活动结束了，发感谢和问卷 <span class="count">${thank.length}</span></h2>
+      ${thank.length ? `<div class="list">${thank.slice(0,10).map(r => actionRow(r,'tt','thankAt','已发')).join('')}</div>` : '<div class="empty">感谢讯息都发完了。</div>'}` : ''}
+    <h2>已联系，还没付款 <span class="count">${unpaid.length}</span></h2>
+    ${unpaid.length ? `<div class="list">${unpaid.slice(0,5).map(r => itemHTML(r)).join('')}</div>` : `<div class="empty">没有待收款的名单。</div>`}
+    ${up[0] ? `<h2>下一个活动</h2>${eventHTML(up[0])}` : ''}`;
+}
+
+function filteredList(){
+  return S.regs.filter(r => {
+    const s = stage(r), c = S.crm[r.id]||{};
+    if (S.evFilter && r.eventId !== S.evFilter) return false;
+    if (S.refFilter && (S.refFilter === '-' ? r.ref : r.ref !== S.refFilter)) return false;
+    if (S.q){ const q = S.q.toLowerCase(); if (![r.name,r.company,r.title,r.phone,r.email,r.industry].join(' ').toLowerCase().includes(q)) return false; }
+    switch (S.filter){
+      case '未联系': return s.key==='new';
+      case '今日跟进': return s.due;
+      case '跟进中': return ['wait4','wait7','fu4','fu7'].includes(s.key);
+      case '147完成': return s.key==='done';
+      case '未付款': return !c.paid;
+      case '已付款': return !!c.paid;
+      case '已出席': return !!isAtt(r.id);
+      case '洽谈中': return c.deal==='洽谈中';
+      case '已成交': return c.deal==='已成交';
+      case '回头客': return history(r).length > 0;
+      case '热': return c.heat==='热';
+    }
+    return true;
+  }).sort((a,b) => stage(a).rank - stage(b).rank);
+}
+function viewList(){
+  const F = ['全部','未联系','今日跟进','跟进中','147完成','热','洽谈中','已成交','未付款','已付款','已出席','回头客'];
+  const list = filteredList();
+  return banners() + `
+    <div class="stack" style="margin-top:14px">
+      <input id="q" type="search" placeholder="搜索姓名、公司、电话、行业" value="${esc(S.q)}" aria-label="搜索名单">
+      <select id="evf" aria-label="按活动筛选"><option value="">全部活动</option>${S.events.map(e => `<option value="${esc(e.id)}" ${S.evFilter===e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select>
+      ${S.team.length ? `<select id="reff" aria-label="按推荐人筛选"><option value="">全部推荐人</option><option value="-" ${S.refFilter==='-'?'selected':''}>没有推荐人（自己来的）</option>${S.team.map(m => `<option value="${esc(m.code)}" ${S.refFilter===m.code?'selected':''}>${esc(m.name)}（${esc(m.code)}）</option>`).join('')}</select>` : ''}
+    </div>
+    <div class="chips">${F.map(f => `<button type="button" class="chip ${S.filter===f?'on':''}" data-f="${f}">${f}</button>`).join('')}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2>${esc(S.filter)} <span class="count">${list.length}</span></h2>
+      ${list.length ? `<button type="button" class="btn sm line" id="exportBtn">汇出 Excel</button>` : ''}</div>
+    ${list.length ? `<div class="list">${list.map(itemHTML).join('')}</div>` : `<div class="empty">这个筛选下没有人。</div>`}`;
+}
+
+function evStats(id){
+  const rs = S.regs.filter(r => r.eventId === id);
+  const c = r => S.crm[r.id] || {};
+  const fb = S.feedback.filter(f => f.eventId === id && f.rating);
+  return { n:rs.length, contacted:rs.filter(r=>fu(r).firstAt).length, paid:rs.filter(r=>c(r).paid).length, att:rs.filter(r=>isAtt(r.id)).length,
+    won:rs.filter(r=>c(r).deal==='已成交').length, rev:rs.reduce((t,r)=>t+(c(r).paid?num(c(r).payAmount):0),0), deal:rs.reduce((t,r)=>t+(c(r).deal==='已成交'?num(c(r).dealValue):0),0),
+    fbN:fb.length, rating: fb.length ? fb.reduce((t,f)=>t+f.rating,0)/fb.length : 0 };
+}
+function shareUrl(e, src){ return baseUrl() ? baseUrl() + '?e=' + encodeURIComponent(e.id) + (src ? '&src=' + src : '') : ''; }
+function eventHTML(e){
+  const d = parseDate(e.date), st = evStats(e.id), url = shareUrl(e);
+  const closed = e.status === '关闭';
+  return `<div class="ev"><div class="hd">
+      <div class="date">${d ? `<b>${d.getDate()}</b><span>${MONTHS[d.getMonth()]}</span>` : '<b>?</b>'}</div>
+      <div style="min-width:0"><b style="display:block">${esc(e.name)}</b><small class="note">${esc(e.time)} · ${esc(e.venue||'地点待定')} · ${esc(e.fee||'免费')}</small>
+      <div style="margin-top:4px"><span class="pill ${closed?'p-done':'p-wait'}">${closed?'已关闭报名':'报名开放中'}</span>${st.fbN ? ` <span class="pill p-due">★ ${st.rating.toFixed(1)}（${st.fbN}份问卷）</span>` : ''}</div></div></div>
+    <div class="stats"><div><b>${st.n}${e.cap ? `<span style="font-size:12px;color:var(--muted)">/${e.cap}</span>` : ''}</b>${e.cap && st.n >= e.cap ? '<span style="color:var(--red)">已额满</span>' : '报名'}</div><div><b>${st.contacted}</b>已联系</div><div><b>${st.paid}</b>已付款</div><div><b>${st.att}</b>出席</div></div>
+    <div class="acts">
+      <button type="button" class="btn sm" data-share="${esc(e.id)}">邀请卡 / 分享</button>
+      <button type="button" class="btn sm wa" data-checkin="${esc(e.id)}">签到模式</button>
+      <button type="button" class="btn sm soft" data-ev="${esc(e.id)}">看名单</button>
+      <button type="button" class="btn sm line" data-toggle="${esc(e.id)}">${closed?'重新开放':'关闭报名'}</button>
+    </div></div>`;
+}
+function viewEvents(){
+  const evs = S.events.slice().sort((a,b) => (parseDate(b.date)||0) - (parseDate(a.date)||0));
+  return banners() + `
+    <h2>发布新活动</h2>
+    <form id="evForm" class="box stack">
+      <label class="field">活动名称<input id="e_name" required placeholder="例如：SME 老板 AI 实战分享会"></label>
+      <div class="grid2"><label class="field">日期<input id="e_date" type="date" required></label><label class="field">时间<input id="e_time" placeholder="例如 2pm - 5pm"></label></div>
+      <div class="grid2"><label class="field">地点<input id="e_venue" placeholder="例如 KL Sentral"></label><label class="field">费用<input id="e_fee" placeholder="例如 RM199 或 免费"></label></div>
+      <label class="field">活动介绍<textarea id="e_desc" rows="4" placeholder="讲者、内容、适合谁来"></textarea></label>
+      <div class="grid2"><label class="field">人数上限（不填 = 不限）<input id="e_cap" type="number" min="1" inputmode="numeric" placeholder="例如 50"></label>
+        <label class="field">联系电话 / WhatsApp<input id="e_contact" type="tel" inputmode="tel" value="${esc(S.cfg.lastContact||'')}" placeholder="例如 012-345 6789"></label></div>
+      <label class="field">Google 地图链接（不填就用地点自动搜寻）<input id="e_map" type="url" placeholder="在 Google 地图按「分享」复制链接"></label>
+      <label class="field">封面图片链接（可不填）<input id="e_cover" type="url" placeholder="https://..."></label>
+      <button class="btn" type="submit" id="e_submit" ${S.cfg.sheetId?'':'disabled'}>发布活动</button>
+    </form>
+    <h2>所有活动 <span class="count">${evs.length}</span></h2>
+    ${evs.length ? `<div class="list">${evs.map(eventHTML).join('')}</div>` : `<div class="empty">还没有活动。用上面的表格开第一个。</div>`}`;
+}
+
+function bar(label, n, max, extra){
+  const pct = max ? Math.round(n / max * 100) : 0;
+  return `<div class="fbar"><span>${label}</span><div class="track"><div class="fill" style="width:${pct}%"></div></div><b>${n}${extra||''}</b></div>`;
+}
+function viewStats(){
+  const all = S.regs, c = r => S.crm[r.id] || {};
+  const T = { n:all.length, contacted:all.filter(r=>fu(r).firstAt).length, paid:all.filter(r=>c(r).paid).length, att:all.filter(r=>isAtt(r.id)).length, won:all.filter(r=>c(r).deal==='已成交').length };
+  const rev = all.reduce((t,r)=>t+(c(r).paid?num(c(r).payAmount):0),0);
+  const deal = all.reduce((t,r)=>t+(c(r).deal==='已成交'?num(c(r).dealValue):0),0);
+  const pipe = all.reduce((t,r)=>t+(c(r).deal==='洽谈中'?num(c(r).dealValue):0),0);
+  const people = new Set(all.map(r => pkey(r.phone))).size;
+  const repeat = people ? all.length - people : 0;
+  const pct = (a,b) => b ? ` · ${Math.round(a/b*100)}%` : '';
+  const evs = S.events.slice().sort((a,b) => (parseDate(b.date)||0) - (parseDate(a.date)||0));
+  const src = {};
+  all.forEach(r => { const k = r.source || '直接'; src[k] = src[k] || { n:0, paid:0, won:0 }; src[k].n++; if (c(r).paid) src[k].paid++; if (c(r).deal==='已成交') src[k].won++; });
+  const fbAll = S.feedback.filter(f => f.rating);
+  const avg = fbAll.length ? (fbAll.reduce((t,f)=>t+f.rating,0)/fbAll.length).toFixed(1) : '-';
+  return banners() + `
+    <h2>总览</h2>
+    <div class="big">
+      <div class="box"><b>${money(rev)}</b><span>已收报名费</span></div>
+      <div class="box"><b>${money(deal)}</b><span>已成交金额</span></div>
+      <div class="box"><b>${money(pipe)}</b><span>洽谈中金额</span></div>
+      <div class="box"><b>${people}</b><span>不重复人数</span></div>
+      <div class="box"><b>${repeat}</b><span>回头报名次数</span></div>
+      <div class="box"><b>${avg}</b><span>平均评分（${fbAll.length}份）</span></div>
+    </div>
+    ${teamBoard()}
+    <h2>转化漏斗</h2>
+    <div class="box funnel">
+      ${bar('报名', T.n, T.n)}${bar('已联系', T.contacted, T.n, pct(T.contacted,T.n))}${bar('已付款', T.paid, T.n, pct(T.paid,T.n))}${bar('出席', T.att, T.n, pct(T.att,T.n))}${bar('成交', T.won, T.n, pct(T.won,T.n))}
+    </div>
+    <h2>每场活动</h2>
+    ${evs.length ? `<div class="tbl"><table><thead><tr><th>活动</th><th>报名</th><th>联系率</th><th>付款</th><th>出席率</th><th>成交</th><th>收入</th><th>成交额</th><th>评分</th></tr></thead><tbody>
+      ${evs.map(e => { const s = evStats(e.id); return `<tr><td>${esc(e.name)}<br><small class="note">${esc(e.date)}</small></td><td>${s.n}</td><td>${s.n?Math.round(s.contacted/s.n*100)+'%':'-'}</td><td>${s.paid}</td><td>${s.n?Math.round(s.att/s.n*100)+'%':'-'}</td><td>${s.won}</td><td>${money(s.rev)}</td><td>${money(s.deal)}</td><td>${s.fbN?s.rating.toFixed(1):'-'}</td></tr>`; }).join('')}
+    </tbody></table></div>` : '<div class="empty">还没有活动。</div>'}
+    <h2>报名渠道效果</h2>
+    ${Object.keys(src).length ? `<div class="tbl"><table><thead><tr><th>渠道</th><th>报名</th><th>付款</th><th>成交</th><th>付款率</th></tr></thead><tbody>
+      ${Object.entries(src).sort((a,b)=>b[1].n-a[1].n).map(([k,v]) => `<tr><td>${esc(SRC_NAME[k] || k)}</td><td>${v.n}</td><td>${v.paid}</td><td>${v.won}</td><td>${Math.round(v.paid/v.n*100)}%</td></tr>`).join('')}
+    </tbody></table></div><p class="note">用「邀请卡 / 分享」里的渠道链接发出去，这里就能看到哪个渠道最有效。</p>` : '<div class="empty">还没有报名资料。</div>'}
+    ${fbAll.length ? `<h2>最新问卷意见</h2><div class="list">${S.feedback.slice().reverse().slice(0,6).map(f => `<div class="box"><b>${esc(f.name||f.phone)}</b> <span class="pill p-due">★ ${f.rating}</span> <small class="note">${esc(f.eventName)}</small>${f.gain?`<p style="margin:6px 0 0">收获：${esc(f.gain)}</p>`:''}${f.improve?`<p class="note" style="margin:4px 0 0">建议：${esc(f.improve)}</p>`:''}${f.next?`<p style="margin:4px 0 0;font-weight:700">想要：${esc(f.next)}</p>`:''}</div>`).join('')}</div>` : ''}`;
+}
+
+function memberCard(m, i){
+  const st = memberStats(m.code);
+  return `<div class="box mcard"><div style="display:flex;gap:12px;align-items:center">
+      <div class="av" style="flex:none">${i !== undefined && i < 3 && st.n ? ['🥇','🥈','🥉'][i] : esc((m.name||'?').slice(0,1))}</div>
+      <div style="flex:1;min-width:0"><b>${esc(m.name)}</b> <span class="pill ${m.active?'p-wait':'p-done'}">${esc(m.code)}${m.active?'':' · 停用'}</span><div class="note">${esc(m.phone)}</div></div>
+      <div style="text-align:right"><b style="font-size:24px;color:var(--brand)">${st.n}</b><div class="note">报名人数</div></div></div>
+    <div class="stats" style="margin-top:10px"><div><b>${st.contacted}</b>已联系</div><div><b>${st.att}</b>出席</div><div><b>${st.paid}</b>付款</div><div><b>${st.won}</b>成交</div></div>
+    <div class="note" style="margin-top:6px">收入 ${money(st.rev)} · 成交额 ${money(st.deal)} · 团队跟进备注 ${st.notes} 条</div>
+    ${(S.cfg.teamNotes||{})[m.code] ? `<div class="memo" style="margin:8px 0 0"><div class="k">你的备注</div><p>${esc(S.cfg.teamNotes[m.code])}</p></div>` : ''}
+    <div class="acts" style="margin-top:10px"><button type="button" class="btn sm soft" data-mlist="${esc(m.code)}">看他的名单</button><button type="button" class="btn sm line" data-mnote="${esc(m.code)}">备注</button></div></div>`;
+}
+function teamBoard(){
+  if (!S.team.length) return '';
+  const ms = S.team.slice().sort((a,b) => memberStats(b.code).n - memberStats(a.code).n || memberStats(b.code).paid - memberStats(a.code).paid);
+  const ai = S.teamAI;
+  return `<h2>团队排行榜 <span class="count">${S.team.length}</span></h2>
+    <div class="list">${ms.map((m,i) => memberCard(m, i)).join('')}</div>
+    <div class="ai" style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">AI 团队建议</h2>
+      <button type="button" class="btn sm" id="teamAiBtn" ${S.sample && !S.teamAIBusy ? '' : 'disabled'}>${S.teamAIBusy ? '分析中…' : ai ? '重新分析' : '分析'}</button></div>
+      ${ai ? `<p style="margin:10px 0 0;line-height:1.6">${esc(ai.summary)}</p><ol>${(ai.steps||[]).map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+        ${(ai.members||[]).length ? (ai.members||[]).map(x => `<p style="margin:6px 0 0"><b>${esc(x.name)}</b>：${esc(x.advice)}</p>`).join('') : ''}
+        <p class="note" style="margin:8px 0 0">分析于 ${fmtDT(ai.at)} · 只是建议</p>` : '<p class="note" style="margin:8px 0 0">根据每个人带来的报名、跟进、出席和成交，看谁做得好、谁需要帮忙、下一步怎么带团队。</p>'}
+    </div>`;
+}
+async function runTeamAI(){
+  if (!S.sample || S.teamAIBusy) return;
+  S.teamAIBusy = true; render();
+  const lines = S.team.map(m => { const s = memberStats(m.code); return `- ${m.name}（${m.code}${m.active?'':'，已停用'}）：报名 ${s.n}，已联系 ${s.contacted}，出席 ${s.att}，付款 ${s.paid}，成交 ${s.won}，成交额 RM${s.deal}，跟进备注 ${s.notes} 条${(S.cfg.teamNotes||{})[m.code] ? '；主办人备注：' + S.cfg.teamNotes[m.code] : ''}`; }).join('\n');
+  const prompt = `你是马来西亚的资深业务教练。主办人 Jaspher 有一个团队帮他推广活动，每人有自己的推荐链接，并用147法则跟进自己带来的报名者。
+以下是每位成员的数据。请指出做得好和需要帮忙的人，给 Jaspher 3 个带团队的具体下一步，再给每位成员一句具体建议。语气用马来西亚华人自然口语，简洁实用，不要夸张。
+
+${lines}
+
+只回 JSON：{"summary":"两三句总结","steps":["下一步1","下一步2","下一步3"],"members":[{"name":"成员名","advice":"一句建议"}]}`;
+  try {
+    const out = await S.sample.json(prompt, { modelTier:'default' });
+    S.teamAI = { at:Date.now(), summary:String(out.summary||''), steps:(Array.isArray(out.steps)?out.steps:[]).slice(0,5).map(String), members:(Array.isArray(out.members)?out.members:[]).slice(0,30).map(x => ({ name:String(x.name||''), advice:String(x.advice||'') })) };
+    saveCfg({ teamAI:S.teamAI });
+  } catch(err){ toast('AI 分析失败，请再试一次'); }
+  S.teamAIBusy = false; render();
+}
+function genCode(name){
+  let base = String(name||'').replace(/[^A-Za-z]/g,'').toUpperCase().slice(0,4);
+  if (base.length < 2) base = 'T';
+  let code;
+  do { code = base + String(Math.floor(Math.random()*90 + 10)); } while (S.team.some(m => m.code === code));
+  return code;
+}
+function loginMsg(m){ return `${m.name} 你好！这是你的活动推荐账号：\n\n团队登入：${teamUrl()}\n推荐代码：${m.code}\nPIN：${m.pin}\n\n登入后可以拿到每个活动你专属的推荐链接，看你带来的报名人数，也可以直接在里面 WhatsApp 和记录 147 跟进。PIN 请不要给别人。`; }
+function viewTeamSet(){
+  return `<h2>团队成员 <span class="count">${S.team.length}</span></h2>
+    <p class="note" style="margin:-4px 0 10px">每人有自己的推荐代码。用他的链接报名的人，会记录在他名下。成员登入后只看得到自己带来的人。</p>
+    <form id="tmForm" class="box stack">
+      <div class="grid2"><label class="field">姓名<input id="tm_name" required placeholder="例如 Amy Tan"></label>
+        <label class="field">电话 / WhatsApp<input id="tm_phone" type="tel" inputmode="tel" placeholder="例如 012-345 6789"></label></div>
+      <label class="field">推荐代码（不填会自动生成，只能英文字母和数字）<input id="tm_code" maxlength="10" placeholder="例如 AMY01" style="text-transform:uppercase"></label>
+      <button class="btn" type="submit" id="tm_submit" ${S.cfg.sheetId?'':'disabled'}>加入团队</button>
+      ${teamUrl() ? `<div class="note">团队登入网址：<span style="user-select:all">${esc(teamUrl())}</span></div>` : '<div class="note">填好上面的报名页网址后，才会有团队登入网址。</div>'}
+    </form>
+    ${S.team.length ? `<div class="list" style="margin-top:12px">${S.team.map(m => `<div class="arow"><div class="who"><b>${esc(m.name)} <span class="pill ${m.active?'p-wait':'p-done'}">${esc(m.code)}</span></b><small>报名 ${memberStats(m.code).n} 位 · PIN ${esc(m.pin)}${m.active?'':' · 已停用'}</small></div>
+      <div class="acts">${m.phone && teamUrl() ? `<a class="btn sm wa" href="${esc(waLink(m.phone, loginMsg(m)))}" target="_blank" rel="noopener">发登入资料</a>` : ''}<button type="button" class="btn sm line" data-copy="${esc(loginMsg(m))}">复制</button><button type="button" class="btn sm soft" data-mtoggle="${esc(m.code)}">${m.active?'停用':'启用'}</button></div></div>`).join('')}</div>` : ''}`;
+}
+async function addMember(e){
+  e.preventDefault();
+  const name = $('#tm_name').value.trim(); if (!name) return toast('请填姓名');
+  let code = $('#tm_code').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if (code && S.team.some(m => m.code === code)) return toast('这个代码已经有人用了');
+  if (!code) code = genCode(name);
+  const pin = String(Math.floor(100000 + Math.random()*900000));
+  const clean = v => { v = String(v||'').trim(); return /^[=+\-@]/.test(v) ? "'" + v : v; };
+  const btn = $('#tm_submit'); btn.disabled = true; btn.textContent = '加入中…';
+  try {
+    await S.mcp.callTool('Google Sheets','append_values',{ spreadsheetId:S.cfg.sheetId, range:'Team!A1', values:[[code, clean(name), "'" + $('#tm_phone').value.replace(/[^\d+]/g,''), "'" + pin, '启用', new Date().toISOString().slice(0,16).replace('T',' ')]] });
+    toast(`已加入：${name}（${code}）`); await loadSheet(true);
+  } catch(err){ toast('加入失败：' + (err.code || err.message || '')); btn.disabled = false; btn.textContent = '加入团队'; }
+}
+async function toggleMember(code){
+  const m = member(code); if (!m) return;
+  try { await S.mcp.callTool('Google Sheets','update_values',{ spreadsheetId:S.cfg.sheetId, range:`Team!E${m.row}`, values:[[m.active?'停用':'启用']] }); await loadSheet(true); toast(m.active ? '已停用，他的链接不会再记名' : '已启用'); }
+  catch(_){ toast('更新失败'); }
+}
+
+function viewSet(){
+  const c = S.cfg;
+  return banners() + `
+    <h2>连接设定</h2>
+    <form id="cfgForm" class="box stack">
+      <label class="field">Google Sheet ID<input id="c_sheet" value="${esc(c.sheetId||'')}" placeholder="docs.google.com/spreadsheets/d/ 后面那串"></label>
+      <label class="field">报名页网址（Apps Script 网页应用）<input id="c_url" value="${esc(c.webAppUrl||'')}" placeholder="https://script.google.com/macros/s/.../exec"></label>
+      ${c.sheetId ? `<a class="note" href="https://docs.google.com/spreadsheets/d/${encodeURIComponent(c.sheetId)}/edit" target="_blank" rel="noopener">打开报名资料表 ↗</a>` : ''}
+      <button class="btn" type="submit">保存</button>
+    </form>
+    ${viewTeamSet()}
+    <h2>WhatsApp 模板</h2>
+    <form id="tplForm" class="box stack">
+      <p class="note" style="margin:0">可用：{name} 名字、{event} 活动、{date} 日期、{time} 时间、{venue} 地点、{map} 地图、{ticket} 个人入场卡（二维码）、{link} 会后问卷链接。</p>
+      ${Object.entries(TPL_NAMES).map(([k,l]) => `<label class="field">${l}<textarea id="tpl_${k}" rows="3">${esc(tpl(k))}</textarea></label>`).join('')}
+      <button class="btn" type="submit">保存模板</button>
+    </form>
+    <h2>147 法则怎么算</h2>
+    <div class="box note">首次联系那天算第1天。第4天（联系后第3天）和第7天（联系后第6天）会自动出现在「今日」。每一步都要写备忘录，AI 会根据备忘录、问卷和历史建议下一步。</div>`;
+}
+
+function render(){
+  renderTabs(); renderTiles();
+  const sub = S.loaded ? `${S.events.length} 个活动 · ${S.regs.length} 位报名` : '读取中…';
+  $('#sub').textContent = sub;
+  if (!S.dbReady){ return; }
+  const v = { today:viewToday, list:viewList, events:viewEvents, stats:viewStats, set:viewSet }[S.tab]();
+  const main = $('#main');
+  const active = document.activeElement && document.activeElement.id;
+  const pos = active === 'q' ? document.activeElement.selectionStart : null;
+  main.innerHTML = v;
+  bindItems(main);
+  if (S.tab === 'list'){
+    const q = $('#q'); q.oninput = e => { S.q = e.target.value; render(); };
+    if (active === 'q'){ q.focus(); try{ q.setSelectionRange(pos,pos); }catch(_){} }
+    $('#evf').onchange = e => { S.evFilter = e.target.value; render(); };
+    const rf = $('#reff'); if (rf) rf.onchange = e => { S.refFilter = e.target.value; render(); };
+    main.querySelectorAll('.chip').forEach(b => b.onclick = () => { S.filter = b.dataset.f; render(); });
+    const ex = $('#exportBtn'); if (ex) ex.onclick = exportCsv;
+  }
+  main.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy));
+  main.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => { S.tab='list'; S.evFilter=b.dataset.ev; S.filter='全部'; render(); });
+  main.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => toggleEvent(b.dataset.toggle, b));
+  main.querySelectorAll('[data-share]').forEach(b => b.onclick = () => { S.sub = { type:'share', id:b.dataset.share }; renderPanel(); });
+  main.querySelectorAll('[data-checkin]').forEach(b => b.onclick = () => { S.sub = { type:'checkin', id:b.dataset.checkin }; S.ciq = ''; renderPanel(); });
+  main.querySelectorAll('[data-flag]').forEach(b => b.onclick = () => { const id = b.dataset.id, f = b.dataset.flag; addMemo(id, f==='remindAt'?'活动前提醒':'会后感谢+问卷', '', { [f]: Date.now() }); toast('已记录'); });
+  if (S.tab === 'events') $('#evForm').onsubmit = createEvent;
+  main.querySelectorAll('[data-mlist]').forEach(b => b.onclick = () => { S.tab='list'; S.refFilter=b.dataset.mlist; S.evFilter=''; S.filter='全部'; window.scrollTo(0,0); render(); });
+  main.querySelectorAll('[data-mnote]').forEach(b => b.onclick = () => { const k = b.dataset.mnote, cur = (S.cfg.teamNotes||{})[k] || ''; S.sub = { type:'mnote', id:k, text:cur }; renderPanel(); });
+  main.querySelectorAll('[data-mtoggle]').forEach(b => b.onclick = () => { b.disabled = true; toggleMember(b.dataset.mtoggle); });
+  const tab = $('#teamAiBtn'); if (tab) tab.onclick = runTeamAI;
+  const tmf = $('#tmForm'); if (tmf) tmf.onsubmit = addMember;
+  if (S.tab === 'set'){
+    $('#cfgForm').onsubmit = async e => { e.preventDefault(); const sheetId = $('#c_sheet').value.trim().replace(/^.*\/d\/([^/]+).*$/,'$1'); const webAppUrl = $('#c_url').value.trim();
+      await saveCfg({ sheetId, webAppUrl }); toast('已保存'); loadSheet(true); };
+    $('#tplForm').onsubmit = async e => { e.preventDefault(); const t = {}; Object.keys(TPL_NAMES).forEach(k => t[k] = $('#tpl_' + k).value); await saveCfg({ templates:t }); toast('模板已保存'); };
+  }
+  if (S.open || S.sub) renderPanel();
+}
+
+// ===== 汇出 CSV（Excel 可开）=====
+async function exportCsv(){
+  const list = filteredList();
+  const H = ['报名编号','报名时间','活动','姓名','公司','职位','电话','电邮','行业','来源','147阶段','首次联系','第4天','第7天','意向','成交阶段','成交金额','已付款','付款金额','付款方式','已出席','问卷评分','问卷下一步','最新备忘录','推荐人','推荐人最新跟进'];
+  const d = t => t ? new Date(t).toISOString().slice(0,10) : '';
+  const rows = list.map(r => { const c = S.crm[r.id]||{}, f = fbFor(r)[0] || {}, m = (c.memos||[]).slice(-1)[0];
+    return [r.id, r.at, r.eventName, r.name, r.company, r.title, r.phone, r.email, r.industry, SRC_NAME[r.source]||r.source, stage(r).label, d(fu(r).firstAt), d(fu(r).fu4At), d(fu(r).fu7At), c.heat||'', c.deal||'', c.dealValue||'', c.paid?'是':'否', c.payAmount||'', c.paid?(c.payMethod||''):'', isAtt(r.id)?'是':'否', f.rating||'', f.next||'', m ? m.text : '', refName(r), (tlogsOf(r.id).slice(-1)[0]||{}).text||'']; });
+  const cell = v => { let s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  const csv = '﻿' + [H].concat(rows).map(r => r.map(cell).join(',')).join('\r\n');
+  if (!S.downloads){ copy(csv); toast('这里不能下载，已复制成 CSV 文字'); return; }
+  try { await S.downloads.save({ filename:`活动名单_${new Date().toISOString().slice(0,10)}.csv`, data:new Blob([csv], { type:'text/csv' }) }); }
+  catch(err){ if (err && err.code !== 'cancelled' && err.code !== 'declined') toast('下载失败'); }
+}
+async function saveCfg(patch){ S.cfg = Object.assign({}, S.cfg, patch); try { await S.db.doc('config/main').set(S.cfg); } catch(_) { toast('保存失败'); } }
+
+// ===== 活动：发布与开关 =====
+async function createEvent(e){
+  e.preventDefault();
+  const name = $('#e_name').value.trim(), date = $('#e_date').value;
+  if (!name || !date) return toast('请填活动名称和日期');
+  const btn = $('#e_submit'); btn.disabled = true; btn.textContent = '发布中…';
+  const id = 'E' + date.replace(/-/g,'').slice(2) + Math.random().toString(36).slice(2,5).toUpperCase();
+  const clean = v => { v = String(v||'').trim(); return /^[=+\-@]/.test(v) ? "'" + v : v; };
+  const row = [id, clean(name), date, clean($('#e_time').value), clean($('#e_venue').value), clean($('#e_desc').value), clean($('#e_fee').value), clean($('#e_cover').value), '开放', new Date().toISOString().slice(0,16).replace('T',' '),
+    (parseInt($('#e_cap').value,10) > 0 ? String(parseInt($('#e_cap').value,10)) : ''), /^https:\/\//.test($('#e_map').value.trim()) ? $('#e_map').value.trim() : '', "'" + $('#e_contact').value.replace(/[^\d+]/g,'')];
+  if ($('#e_contact').value.trim() && $('#e_contact').value.trim() !== S.cfg.lastContact) saveCfg({ lastContact:$('#e_contact').value.trim() });
+  try {
+    await S.mcp.callTool('Google Sheets','append_values',{ spreadsheetId:S.cfg.sheetId, range:'Events!A1', values:[row] });
+    toast('活动已发布，邀请卡已生成'); await loadSheet(true); if (S.events.some(x => x.id === id)){ S.sub = { type:'share', id }; renderPanel(); }
+  } catch(err){ toast('发布失败：' + (err.code || err.message || '')); btn.disabled = false; btn.textContent = '发布活动'; }
+}
+async function toggleEvent(id, btn){
+  const ev = S.events.find(x => x.id === id); if (!ev) return;
+  btn.disabled = true;
+  try {
+    await S.mcp.callTool('Google Sheets','update_values',{ spreadsheetId:S.cfg.sheetId, range:`Events!I${ev.row}`, values:[[ev.status==='关闭'?'开放':'关闭']] });
+    await loadSheet(true);
+  } catch(err){ toast('更新失败'); btn.disabled = false; }
+}
+
+// ===== 联系人详情 =====
+function openContact(id){ S.open = id; S.memoKind = null; S.aiErr = ''; renderPanel(); }
+function closePanel(){ if (S.ciTimer && !S.open){ clearInterval(S.ciTimer); S.ciTimer = null; } if (S.open){ S.open = null; } else { S.sub = null; } $('#panelHost').innerHTML = ''; if (S.sub) renderPanel(); else render(); }
+function renderPanel(){
+  if (!S.open && S.sub) return S.sub.type === 'checkin' ? renderCheckin() : S.sub.type === 'mnote' ? renderMNote() : renderShare();
+  const r = S.regs.find(x => x.id === S.open); if (!r){ S.open = null; $('#panelHost').innerHTML = ''; if (S.sub) renderPanel(); return; }
+  const hist = history(r), fbs = fbFor(r);
+  const c = Object.assign({}, S.crm[r.id] || {}, fu(r)), s = stage(r);
+  const byTeam = k => !(S.crm[r.id]||{})[k] && c[k] ? `（${esc(refName(r))} 记录）` : '';
+  const scrollY = $('.panel') ? $('.panel').scrollTop : 0;
+  const draftText = $('#memoText') ? $('#memoText').value : '';
+  const today = sod(Date.now());
+  const d4 = c.firstAt ? sod(c.firstAt) + 3*DAY : null, d7 = c.firstAt ? sod(c.firstAt) + 6*DAY : null;
+  const dotCls = (doneAt, dueAt) => doneAt ? 'ok' : (!dueAt ? '' : today > dueAt ? 'late' : today === dueAt ? 'due' : '');
+  const stepBtns = (k, t) => `<div class="row"><a class="btn sm wa" href="${esc(waLink(r.phone, fill(tpl(t), r)))}" target="_blank" rel="noopener">WhatsApp</a><button type="button" class="btn sm soft" data-rec="${k}">记录这次联系</button></div>`;
+  const memos = (c.memos || []).slice().reverse();
+  const ai = c.ai;
+  $('#panelHost').innerHTML = `<div class="panel" role="dialog" aria-label="${esc(r.name)}">
+    <div class="bar gut"><div class="inner" style="display:flex;align-items:center;gap:10px;width:100%"><button type="button" class="back" id="pBack" aria-label="返回"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></button><b style="flex:1">${esc(r.name)}</b><span class="pill ${s.cls}">${esc(s.label)}</span></div></div>
+    <div class="gut"><div class="inner stack">
+      <div class="ncard">
+        <div class="nm">${esc(r.name)}</div><div class="tt">${esc(r.title)}</div>
+        <div class="co">${esc(r.company)}</div>
+        <div class="ln">${esc(r.phone)}</div>${r.email?`<div class="ln">${esc(r.email)}</div>`:''}
+        ${r.industry?`<div class="ln">行业：${esc(r.industry)}</div>`:''}
+        <div class="ft"><span>${esc(r.eventName)}</span><span>报名 ${esc(r.at.slice(0,16))}</span></div>
+      </div>
+      <div class="qa">
+        <a class="btn wa" href="${esc(waLink(r.phone, c.firstAt ? '' : fill(tpl('t1'), r)))}" target="_blank" rel="noopener">WhatsApp</a>
+        <button type="button" class="btn line" data-copy="${esc(ticketUrl(r) || r.phone)}">${ticketUrl(r) ? '复制入场卡' : '复制电话'}</button>
+        <button type="button" class="btn line" data-copy="${esc(r.email||r.phone)}">${r.email?'复制电邮':'复制号码'}</button>
+      </div>
+      ${r.ref ? `<div class="box"><div class="note">推荐人</div><p style="margin:4px 0 0"><b>${esc(refName(r))}</b> <span class="pill p-wait">${esc(r.ref)}</span></p>
+        ${tlogsOf(r.id).length ? `<div class="note" style="margin-top:10px">${esc(refName(r))} 的跟进备注</div>${tlogsOf(r.id).slice().reverse().map(l => `<div class="memo" style="margin:8px 0 0"><div class="k">${esc(String(l.at).slice(5,16))} · ${esc(l.kind)}</div>${l.text?`<p>${esc(l.text)}</p>`:''}</div>`).join('')}` : `<p class="note" style="margin:6px 0 0">${esc(refName(r))} 还没记录跟进。</p>`}</div>` : ''}
+      ${r.note ? `<div class="box"><div class="note">报名时写的</div><p style="margin:4px 0 0;white-space:pre-wrap">${esc(r.note)}</p></div>` : ''}
+      ${fbs.length ? `<div class="box"><div class="note">会后问卷</div>${fbs.map(f => `<p style="margin:6px 0 0"><span class="pill p-due">★ ${f.rating}</span> ${f.next?`<b>想要：${esc(f.next)}</b>`:''}</p>${f.gain?`<p style="margin:6px 0 0">收获：${esc(f.gain)}</p>`:''}${f.improve?`<p class="note" style="margin:4px 0 0">建议：${esc(f.improve)}</p>`:''}`).join('')}</div>` : ''}
+      ${hist.length ? `<div class="box"><div class="note">也参加/报名过（共 ${hist.length+1} 次）</div>${hist.map(h => { const hc = S.crm[h.id]||{}; return `<button type="button" class="chip" style="margin:6px 6px 0 0" data-open="${esc(h.id)}">${esc(h.eventName)}${isAtt(h.id)?' · 出席':''}${hc.paid?' · 已付':''}</button>`; }).join('')}</div>` : ''}
+
+      <div class="box">
+        <h2 style="margin-top:0">147 跟进</h2>
+        <div class="steps">
+          <div class="step"><div class="dot ${c.firstAt?'ok':''}">1</div><div><b>第1天 · 首次联系</b><span class="note">${c.firstAt ? '已联系 ' + fmtDT(c.firstAt) + byTeam('firstAt') : '还没联系'}</span>${c.firstAt ? '' : stepBtns('first','t1')}</div></div>
+          <div class="step"><div class="dot ${dotCls(c.fu4At, d4)}">4</div><div><b>第4天 · 跟进</b><span class="note">${c.fu4At ? '已跟进 ' + fmtDT(c.fu4At) + byTeam('fu4At') : d4 ? (today>=d4 ? '到期了 · ' : '') + fmtD(d4) : '首次联系后自动排期'}</span>${c.firstAt && !c.fu4At ? stepBtns('fu4','t4') : ''}</div></div>
+          <div class="step"><div class="dot ${dotCls(c.fu7At, d7)}">7</div><div><b>第7天 · 跟进</b><span class="note">${c.fu7At ? '已跟进 ' + fmtDT(c.fu7At) + byTeam('fu7At') : d7 ? (today>=d7 ? '到期了 · ' : '') + fmtD(d7) : '首次联系后自动排期'}</span>${c.fu4At && !c.fu7At ? stepBtns('fu7','t7') : ''}</div></div>
+        </div>
+        ${S.memoKind ? `<div class="stack" style="margin-top:4px">
+          <label class="field">${({first:'首次联系',fu4:'第4天跟进',fu7:'第7天跟进',memo:'备忘录'})[S.memoKind]}：他说了什么？<textarea id="memoText" rows="4" placeholder="例如：有兴趣，但要问合伙人；想知道有没有分期">${esc(draftText)}</textarea></label>
+          <div style="display:flex;gap:8px"><button type="button" class="btn" id="memoSave">保存</button><button type="button" class="btn line" id="memoCancel">取消</button></div></div>` : ''}
+      </div>
+
+      <div class="box stack">
+        <h2 style="margin:0">付款与出席</h2>
+        <label class="toggle"><input type="checkbox" id="paid" ${c.paid?'checked':''}> 已付款</label>
+        ${c.paid ? `<div class="grid2">
+          <label class="field">金额 (RM)<input id="payAmt" inputmode="decimal" value="${esc(c.payAmount||'')}"></label>
+          <label class="field">方式<select id="payMethod">${['银行转账','DuitNow','现金','信用卡','其他'].map(m=>`<option ${c.payMethod===m?'selected':''}>${m}</option>`).join('')}</select></label></div>
+          <div class="note">记录于 ${c.paidAt ? fmtDT(c.paidAt) : '-'}</div>` : ''}
+        <label class="toggle"><input type="checkbox" id="att" ${isAtt(r.id)?'checked':''}> 已出席活动${isAtt(r.id) && checkinText(r)?` <span class="note" style="font-weight:400">签到 ${checkinText(r)}</span>`:''}</label>
+        <div class="note">${c.remindAt ? '✓ 活动前提醒已发 ' + fmtDT(c.remindAt) : '活动前提醒：还没发'} · ${c.thankAt ? '✓ 会后感谢已发 ' + fmtDT(c.thankAt) : '会后感谢：还没发'}</div>
+        <div><div class="note" style="margin-bottom:6px">意向</div><div class="heat">${['热','温','冷'].map(h=>`<button type="button" class="chip ${c.heat===h?'on':''}" data-heat="${h}">${h}</button>`).join('')}</div></div>
+      </div>
+
+      <div class="box stack">
+        <h2 style="margin:0">成交管道</h2>
+        <div class="heat" style="flex-wrap:wrap">${DEALS.map(d=>`<button type="button" class="chip ${(c.deal||'潜在')===d?'on':''}" data-deal="${d}">${d}</button>`).join('')}</div>
+        <div class="grid2">
+          <label class="field">成交/预计金额 (RM)<input id="dealVal" inputmode="decimal" value="${esc(c.dealValue||'')}" placeholder="例如 5000"></label>
+          <label class="field">产品 / 服务<input id="dealWhat" value="${esc(c.dealWhat||'')}" placeholder="例如 年度教练配套"></label>
+        </div>
+      </div>
+
+      <div class="ai">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">AI 下一步建议</h2>
+        <button type="button" class="btn sm" id="aiBtn" ${S.sample?'':'disabled'}>${S.aiBusy ? '分析中…' : ai ? '重新分析' : '分析'}</button></div>
+        ${!S.sample ? '<p class="note">这个画面暂时用不到 AI。</p>' : ''}
+        ${S.aiErr ? `<p class="note" style="color:var(--red)">${esc(S.aiErr)}</p>` : ''}
+        ${ai ? `<p style="margin:10px 0 0;line-height:1.6">${esc(ai.summary)}</p>
+          <p class="note" style="margin:6px 0 0">判断：${esc(ai.intent)}</p>
+          <ol>${(ai.steps||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
+          ${ai.message ? `<div class="note" style="margin-top:8px">建议 WhatsApp 讯息</div><div class="draft">${esc(ai.message)}</div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><a class="btn sm wa" href="${esc(waLink(r.phone, ai.message))}" target="_blank" rel="noopener">用这段发 WhatsApp</a><button type="button" class="btn sm line" data-copy="${esc(ai.message)}">复制</button></div>` : ''}
+          <p class="note" style="margin:8px 0 0">分析于 ${fmtDT(ai.at)} · 只是建议，以你的判断为准</p>`
+        : (S.sample ? '<p class="note" style="margin:8px 0 0">根据报名资料和你的备忘录，建议下一步怎么做、要发什么讯息。备忘录写越详细越准。</p>' : '')}
+      </div>
+
+      <div class="box">
+        <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0 0 10px">备忘录 <span class="count">${memos.length}</span></h2><button type="button" class="btn sm soft" data-rec="memo">+ 写一条</button></div>
+        ${memos.length ? memos.map(m => `<div class="memo"><div class="k">${fmtDT(m.at)} · ${esc(m.kind)}</div>${m.text?`<p>${esc(m.text)}</p>`:''}</div>`).join('') : '<p class="note">还没有记录。</p>'}
+      </div>
+    </div></div></div>`;
+  const P = $('.panel'); P.scrollTop = scrollY;
+  $('#pBack').onclick = closePanel;
+  P.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy));
+  P.querySelectorAll('[data-rec]').forEach(b => b.onclick = () => { S.memoKind = b.dataset.rec; renderPanel(); const t = $('#memoText'); if (t){ t.focus(); t.scrollIntoView({block:'center'}); } });
+  if (S.memoKind){
+    $('#memoCancel').onclick = () => { S.memoKind = null; $('#memoText').value=''; renderPanel(); };
+    $('#memoSave').onclick = () => {
+      const k = S.memoKind, text = $('#memoText').value; const now = Date.now();
+      const label = ({first:'首次联系',fu4:'第4天跟进',fu7:'第7天跟进',memo:'备忘录'})[k];
+      const extra = k==='first' ? { firstAt:now } : k==='fu4' ? { fu4At:now } : k==='fu7' ? { fu7At:now } : {};
+      if (k==='memo' && !text.trim()) return toast('写点内容再保存');
+      S.memoKind = null; $('#memoText').value = '';
+      addMemo(r.id, label, text, extra); toast('已记录');
+    };
+  }
+  $('#paid').onchange = e => saveCrm(r.id, e.target.checked ? { paid:true, paidAt:Date.now(), payMethod:c.payMethod||'银行转账' } : { paid:false });
+  if (c.paid){
+    $('#payAmt').onchange = e => saveCrm(r.id, { payAmount:e.target.value.trim() });
+    $('#payMethod').onchange = e => saveCrm(r.id, { payMethod:e.target.value });
+  }
+  $('#att').onchange = e => saveCrm(r.id, e.target.checked ? Object.assign({ attended:true }, (c.checkinAt || r.checkin) ? {} : { checkinAt:Date.now() }) : { attended:false });
+  P.querySelectorAll('[data-open]').forEach(b => b.onclick = () => openContact(b.dataset.open));
+  P.querySelectorAll('[data-deal]').forEach(b => b.onclick = () => { const d = b.dataset.deal; if (d !== (c.deal||'潜在')) addMemo(r.id, '成交阶段', '改为「' + d + '」', { deal:d, dealAt:Date.now() }); });
+  $('#dealVal').onchange = e => saveCrm(r.id, { dealValue:e.target.value.trim() });
+  $('#dealWhat').onchange = e => saveCrm(r.id, { dealWhat:e.target.value.trim() });
+  P.querySelectorAll('[data-heat]').forEach(b => b.onclick = () => saveCrm(r.id, { heat: c.heat===b.dataset.heat ? '' : b.dataset.heat }));
+  $('#aiBtn').onclick = () => runAI(r);
+}
+
+function renderMNote(){
+  const m = member(S.sub.id); if (!m){ S.sub = null; $('#panelHost').innerHTML = ''; return; }
+  const st = memberStats(m.code);
+  $('#panelHost').innerHTML = panelShell('成员备注：' + m.name, '', `
+    <div class="ncard"><div class="nm">${esc(m.name)}</div><div class="tt">推荐代码 ${esc(m.code)}</div><div class="ln">${esc(m.phone)}</div>
+      <div class="ft"><span>报名 ${st.n} 位 · 出席 ${st.att} · 成交 ${st.won}</span><span>${m.active?'启用中':'已停用'}</span></div></div>
+    <label class="field">你对这位成员的备注（只有你看得到，AI 团队建议会参考）<textarea id="mnText" rows="5" placeholder="例如：人脉在餐饮业，跟进很快，但不太会收尾">${esc(S.sub.text)}</textarea></label>
+    <div style="display:flex;gap:8px"><button type="button" class="btn" id="mnSave">保存</button><button type="button" class="btn line" id="mnCancel">取消</button></div>`);
+  $('#pBack').onclick = closePanel; $('#mnCancel').onclick = closePanel;
+  $('#mnSave').onclick = async () => { const n = Object.assign({}, S.cfg.teamNotes || {}, { [m.code]: $('#mnText').value.trim() }); await saveCfg({ teamNotes:n }); toast('已保存'); closePanel(); };
+}
+
+// ===== 签到模式 =====
+function panelShell(title, right, body){
+  return `<div class="panel" role="dialog" aria-label="${esc(title)}">
+    <div class="bar gut"><div class="inner" style="display:flex;align-items:center;gap:10px;width:100%"><button type="button" class="back" id="pBack" aria-label="返回"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></button><b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(title)}</b>${right||''}</div></div>
+    <div class="gut"><div class="inner stack">${body}</div></div></div>`;
+}
+function renderCheckin(){
+  const ev = S.events.find(e => e.id === S.sub.id); if (!ev){ S.sub = null; $('#panelHost').innerHTML = ''; return; }
+  const all = S.regs.filter(r => r.eventId === ev.id);
+  if (!S.ciTimer) S.ciTimer = setInterval(() => { if (S.sub && S.sub.type === 'checkin' && !document.hidden) loadSheet(true); }, 20000);
+  const inN = all.filter(r => isAtt(r.id)).length;
+  const q = S.ciq.toLowerCase().replace(/\s/g,'');
+  const list = all.filter(r => !q || (r.name + r.company + r.phone.replace(/\D/g,'')).toLowerCase().replace(/\s/g,'').includes(q))
+    .sort((a,b) => (+!!isAtt(a.id)) - (+!!isAtt(b.id)) || a.name.localeCompare(b.name));
+  const scrollY = $('.panel') ? $('.panel').scrollTop : 0;
+  const hadFocus = document.activeElement && document.activeElement.id === 'ciq';
+  $('#panelHost').innerHTML = panelShell('签到：' + ev.name, `<span class="pill p-paid">${inN} / ${all.length}</span>`, `
+    <div class="banner" style="margin-top:0">最快的方法：直接用手机<b>相机</b>扫参加者入场卡上的二维码，第一次输入签到密码，之后扫一个签一个，这里会自动更新（每 20 秒自动刷新）。没带入场卡的，在下面搜名字手动签到。</div>
+    <input id="ciq" type="search" placeholder="打名字、公司或电话后4位" value="${esc(S.ciq)}" aria-label="搜索签到">
+    ${list.length ? list.map(r => { const c = S.crm[r.id]||{}; return `<div class="ci ${isAtt(r.id)?'in':''}"><div style="min-width:0"><b>${esc(r.name)}</b>${c.paid?' <span class="pill p-paid">已付款</span>':(ev.fee && !/免费|^0$/i.test(ev.fee) ? ' <span class="pill p-late">未付款</span>' : '')}<br><small class="note">${esc(r.company||'')} · ${esc(r.phone)}</small></div>
+      <button type="button" class="btn cibtn ${isAtt(r.id)?'line':''}" data-ci="${esc(r.id)}">${isAtt(r.id)?'撤销':'签到'}</button></div>`; }).join('') : `<div class="empty">${all.length ? '找不到这个人。他可能还没报名，请他扫下面的二维码现场报名。' : '这个活动还没有人报名。'}</div>`}
+    ${shareUrl(ev, 'walkin') ? `<div class="box" style="text-align:center"><div class="note" style="margin-bottom:8px">现场报名二维码</div><div class="qr" id="qrWalk"></div></div>` : ''}`);
+  const P = $('.panel'); P.scrollTop = scrollY;
+  $('#pBack').onclick = closePanel;
+  const inp = $('#ciq'); inp.oninput = e => { S.ciq = e.target.value; renderCheckin(); };
+  if (hadFocus){ inp.focus(); const n = inp.value.length; try{ inp.setSelectionRange(n,n); }catch(_){} }
+  P.querySelectorAll('[data-ci]').forEach(b => b.onclick = () => { const id = b.dataset.ci, c = S.crm[id]||{};
+    if (isAtt(id)) saveCrm(id, { attended:false }); else { saveCrm(id, { attended:true, checkinAt:Date.now() }); toast('已签到'); } });
+  qr('qrWalk', shareUrl(ev, 'walkin'), 180);
+}
+function qr(id, text, size){
+  const el = document.getElementById(id); if (!el || !text) return;
+  if (typeof QRCode === 'undefined'){ el.textContent = text; return; }
+  el.innerHTML = ''; new QRCode(el, { text, width:size, height:size, correctLevel: QRCode.CorrectLevel.M });
+}
+// ===== 邀请卡（图片）=====
+function wrapText(ctx, text, maxW, maxLines){
+  const out = []; let line = '';
+  for (const ch of String(text||'').replace(/\s+/g,' ')){
+    const t = line + ch;
+    if (ctx.measureText(t).width > maxW && line){ out.push(line); line = ch.trim() ? ch : ''; if (out.length === maxLines) break; }
+    else line = t;
+  }
+  if (out.length < maxLines && line) out.push(line);
+  else if (out.length === maxLines && line){ let l = out[maxLines-1]; while (ctx.measureText(l + '…').width > maxW && l) l = l.slice(0,-1); out[maxLines-1] = l + '…'; }
+  return out;
+}
+function weekday(d){ return ['日','一','二','三','四','五','六'][d.getDay()]; }
+async function drawInvite(ev){
+  const cv = document.getElementById('inviteCv'); if (!cv) return;
+  try { await document.fonts.ready; } catch(_) {}
+  const W = 1080, H = 1350, ctx = cv.getContext('2d'); cv.width = W; cv.height = H;
+  const F = '"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+  // 背景
+  const g = ctx.createLinearGradient(0,0,W,H); g.addColorStop(0,'#0E5E3F'); g.addColorStop(1,'#0A3F2B');
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.beginPath(); ctx.arc(W-80, 120, 260, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(60, H-420, 180, 0, Math.PI*2); ctx.fill();
+  // 顶部标签
+  ctx.fillStyle = '#F7C948'; roundRect(ctx, 80, 90, 210, 64, 32); ctx.fill();
+  ctx.fillStyle = '#0E5E3F'; ctx.font = `900 32px ${F}`; ctx.textBaseline = 'middle'; ctx.fillText('诚邀出席', 120, 123);
+  // 标题
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'alphabetic'; ctx.font = `900 76px ${F}`;
+  const tl = wrapText(ctx, ev.name, W-160, 3); let y = 270;
+  tl.forEach(l => { ctx.fillText(l, 80, y); y += 96; });
+  // 资料行
+  y += 20;
+  const d = parseDate(ev.date);
+  const rows = [['日期', d ? `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（星期${weekday(d)}）` : ev.date], ['时间', ev.time || '待定'], ['地点', ev.venue || '待定'], ['费用', ev.fee || '免费']];
+  if (ev.cap) rows.push(['名额', `限 ${ev.cap} 位`]);
+  if (ev.contact) rows.push(['联系', ev.contact]);
+  rows.forEach(([k,v]) => {
+    ctx.font = `500 30px ${F}`; ctx.fillStyle = 'rgba(255,255,255,.65)'; ctx.fillText(k, 80, y);
+    ctx.font = `700 38px ${F}`; ctx.fillStyle = '#fff'; ctx.fillText(wrapText(ctx, v, W-260, 1)[0] || '', 180, y);
+    y += 66;
+  });
+  // 简介
+  const by = H - 330;
+  const room = Math.min(3, Math.floor((by - 40 - (y + 10)) / 46));
+  if (ev.desc && room > 0){ y += 10; ctx.font = `400 30px ${F}`; ctx.fillStyle = 'rgba(255,255,255,.85)';
+    wrapText(ctx, ev.desc, W-160, room).forEach(l => { ctx.fillText(l, 80, y); y += 46; }); }
+  // 底部白卡 + 二维码
+  ctx.fillStyle = '#fff'; roundRect(ctx, 60, by, W-120, 270, 36); ctx.fill();
+  const url = shareUrl(ev, 'card');
+  const qs = 210, qx = W - 60 - 30 - qs, qy = by + 30;
+  if (url && typeof QRCode !== 'undefined'){
+    const tmp = document.createElement('div'); new QRCode(tmp, { text:url, width:qs, height:qs, colorDark:'#0E5E3F', correctLevel:QRCode.CorrectLevel.M });
+    const src = tmp.querySelector('canvas'); if (src) ctx.drawImage(src, qx, qy, qs, qs);
+  } else { ctx.strokeStyle = '#ccd'; ctx.setLineDash([10,8]); ctx.strokeRect(qx, qy, qs, qs); ctx.setLineDash([]); }
+  ctx.fillStyle = '#16201B'; ctx.font = `900 46px ${F}`; ctx.fillText('扫码立即报名', 110, by + 105);
+  ctx.font = `400 28px ${F}`; ctx.fillStyle = '#65726B';
+  ctx.fillText(url ? '报名后会收到个人入场卡' : '（报名链接设定后会显示二维码）', 110, by + 160);
+  ctx.fillText('活动当天出示入场卡二维码签到', 110, by + 205);
+}
+function roundRect(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+async function saveInvite(ev){
+  const cv = document.getElementById('inviteCv'); if (!cv) return;
+  const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+  if (!S.downloads || !blob){ toast('这里不能下载，请长按图片保存或截图'); return; }
+  try { await S.downloads.save({ filename:`邀请卡_${ev.name.slice(0,20)}.png`, data:blob }); } catch(_) {}
+}
+
+// ===== 给 AI Agent 的活动资料包 =====
+function agentBrief(ev){
+  const st = evStats(ev.id);
+  const links = { register: shareUrl(ev) || null, channels: Object.fromEntries(SOURCES.map(([k]) => [k, shareUrl(ev,k) || null])), feedback: fbUrl(ev.id) || null };
+  const promo = `【${ev.name}】\n📅 ${ev.date} ${ev.time}\n📍 ${ev.venue}\n${ev.fee ? '💰 ' + ev.fee + '\n' : ''}${ev.cap ? '👥 限 ' + ev.cap + ' 位\n' : ''}${mapLink(ev) ? '🗺 地图：' + mapLink(ev) + '\n' : ''}${ev.contact ? '📞 询问：' + ev.contact + '\n' : ''}${ev.desc ? '\n' + ev.desc + '\n' : ''}\n立即报名 👉 ${links.register || '（报名链接待设定）'}`;
+  const data = { type:'event_brief', version:1, event:{ id:ev.id, name:ev.name, date:ev.date, time:ev.time, venue:ev.venue, fee:ev.fee || '免费', capacity:ev.cap || null, seats_left: ev.cap ? Math.max(0, ev.cap - st.n) : null, map:mapLink(ev) || null, contact_phone:ev.contact || null, contact_whatsapp: ev.contact ? 'https://wa.me/' + waNum(ev.contact) : null, description:ev.desc, status:ev.status==='关闭'?'closed':'open' },
+    links, stats:{ registered:st.n, contacted:st.contacted, paid:st.paid, attended:st.att }, organizer:'Jaspher',
+    channel_codes: Object.fromEntries(SOURCES) };
+  return `# 活动资料包：${ev.name}
+
+你是协助 Jaspher 推广这场活动的助手。以下资料是准确的，请只用这里的资料，不要自己编日期、价格、讲者或优惠。
+
+## 活动资料
+- 活动ID：${ev.id}
+- 名称：${ev.name}
+- 日期：${ev.date}
+- 时间：${ev.time || '待定'}
+- 地点：${ev.venue || '待定'}
+- 费用：${ev.fee || '免费'}
+- 名额：${ev.cap ? `限 ${ev.cap} 位，目前剩 ${Math.max(0, ev.cap - st.n)} 位${st.n >= ev.cap ? '（已额满，不要再邀请人报名）' : ''}` : '不限'}
+- 地图：${mapLink(ev) || '（没有）'}
+- 主办方联系：${ev.contact ? `${ev.contact}（WhatsApp：https://wa.me/${waNum(ev.contact)}）` : '（没有）'}
+- 报名状态：${ev.status === '关闭' ? '已关闭，不要再邀请人报名' : '开放中'}
+${ev.desc ? `\n## 活动介绍\n${ev.desc}\n` : ''}
+## 链接
+- 通用报名链接：${links.register || '（还没设定）'}
+${SOURCES.map(([k,l]) => `- ${l}专用：${links.channels[k] || '（还没设定）'}`).join('\n')}
+- 会后问卷（活动结束后才发）：${links.feedback || '（还没设定）'}
+
+## 怎么用
+1. 发到哪个渠道，就用那个渠道的专用链接，这样可以追踪报名来源。
+2. 报名的人会自动收到个人入场卡（带签到二维码），不用另外发。
+3. 语气：马来西亚华人口语，亲切、专业、不夸张。不要用"保证赚钱"、"名额只剩最后几个"之类没根据的话。
+4. 有人问到资料里没有的问题（例如讲者背景、退款、团体价），请回答"我帮你问 Jaspher"，不要自己回答。
+5. 不要收集或转发任何报名者的个人资料。
+
+## 参考宣传文案
+${promo}
+
+## 目前进度（${new Date().toISOString().slice(0,10)}）
+报名 ${st.n} 人 · 已联系 ${st.contacted} · 已付款 ${st.paid} · 出席 ${st.att}
+
+## 机器可读资料（JSON）
+\`\`\`json
+${JSON.stringify(data, null, 2)}
+\`\`\`
+`;
+}
+async function saveBrief(ev){
+  const text = agentBrief(ev);
+  if (!S.downloads){ copy(text); return; }
+  try { await S.downloads.save({ filename:`活动资料包_${ev.id}.md`, data:new Blob([text], { type:'text/markdown' }) }); } catch(_) {}
+}
+
+// ===== 分享 / 二维码 =====
+function renderShare(){
+  const ev = S.events.find(e => e.id === S.sub.id); if (!ev){ S.sub = null; $('#panelHost').innerHTML = ''; return; }
+  const url = shareUrl(ev), fb = fbUrl(ev.id);
+  const msg = u => `【${ev.name}】\n日期：${ev.date} ${ev.time}\n地点：${ev.venue}\n${mapLink(ev) ? '地图：' + mapLink(ev) + '\n' : ''}${ev.fee ? '费用：' + ev.fee + '\n' : ''}${ev.cap ? '名额：限 ' + ev.cap + ' 位\n' : ''}${ev.contact ? '询问：' + ev.contact + '\n' : ''}\n立即报名 👉 ${u}`;
+  $('#panelHost').innerHTML = panelShell('邀请卡：' + ev.name, '', `
+    <h2 style="margin:0">邀请卡</h2>
+    <div class="box" style="text-align:center;padding:10px"><canvas id="inviteCv" style="width:100%;max-width:420px;height:auto;border-radius:12px;display:block;margin:0 auto" aria-label="活动邀请卡"></canvas>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap"><button type="button" class="btn sm" id="dlInvite">下载邀请卡图片</button><button type="button" class="btn sm line" data-copy="${esc(msg(shareUrl(ev,'card') || url))}">复制配图文字</button></div>
+      <p class="note" style="margin:8px 0 0">1080×1350，适合 WhatsApp、FB、IG。卡上的二维码会记录为「邀请卡」渠道。</p></div>
+    <h2 style="margin:6px 0 0">给 AI Agent 的资料包</h2>
+    <div class="box stack">
+      <p class="note" style="margin:0">把这份资料交给帮你做推广的 AI，里面有准确的活动资料、各渠道链接、宣传文案、注意事项和 JSON，不含任何报名者个人资料。</p>
+      <pre id="briefPre" style="max-height:220px;overflow:auto;background:var(--bg);border-radius:10px;padding:10px;font-size:12px;white-space:pre-wrap;margin:0">${esc(agentBrief(ev))}</pre>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" id="cpBrief">复制资料包</button><button type="button" class="btn sm line" id="dlBrief">下载 .md 文件</button></div>
+    </div>
+    <h2 style="margin:6px 0 0">报名链接</h2>
+    <div class="box" style="text-align:center"><div class="note" style="margin-bottom:8px">报名二维码（可截图放海报）</div><div class="qr" id="qrMain"></div>
+      <div class="link" style="margin:10px 0 0">${esc(url)}</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap"><button type="button" class="btn sm" data-copy="${esc(url)}">复制链接</button><a class="btn sm wa" href="https://wa.me/?text=${encodeURIComponent(msg(url))}" target="_blank" rel="noopener">WhatsApp 分享</a><button type="button" class="btn sm line" data-copy="${esc(msg(url))}">复制宣传文字</button></div></div>
+    <h2 style="margin:6px 0 0">按渠道发链接</h2>
+    <p class="note" style="margin:0">每个渠道用不同链接，「数据」里就能看到哪个渠道带来最多报名和成交。</p>
+    ${SOURCES.map(([k,l]) => `<div class="arow"><div class="who"><b>${l}</b><small style="word-break:break-all;white-space:normal">${esc(shareUrl(ev,k))}</small></div><div class="acts"><button type="button" class="btn sm soft" data-copy="${esc(msg(shareUrl(ev,k)))}">复制</button></div></div>`).join('')}
+    ${S.team.filter(m => m.active).length ? `<h2 style="margin:6px 0 0">团队推荐链接</h2>
+    <p class="note" style="margin:0">每位成员的专属链接。成员自己登入团队页也拿得到。</p>
+    ${S.team.filter(m => m.active).map(m => `<div class="arow"><div class="who"><b>${esc(m.name)} <span class="pill p-wait">${esc(m.code)}</span> · 已带来 ${S.regs.filter(r => r.eventId === ev.id && r.ref === m.code).length} 位</b><small style="word-break:break-all;white-space:normal">${esc(refUrl(ev, m.code))}</small></div><div class="acts"><button type="button" class="btn sm soft" data-copy="${esc(msg(refUrl(ev, m.code)))}">复制</button></div></div>`).join('')}` : ''}
+    <h2 style="margin:6px 0 0">会后问卷</h2>
+    <div class="box" style="text-align:center"><div class="note" style="margin-bottom:8px">活动结束时投影这个二维码，让大家当场填</div><div class="qr" id="qrFb"></div>
+      <div class="link" style="margin:10px 0 0">${esc(fb)}</div>
+      <div style="margin-top:10px"><button type="button" class="btn sm" data-copy="${esc(fb)}">复制问卷链接</button></div></div>`);
+  $('#pBack').onclick = closePanel;
+  $('.panel').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(b.dataset.copy));
+  qr('qrMain', url, 200); qr('qrFb', fb, 180);
+  drawInvite(ev);
+  $('#dlInvite').onclick = () => saveInvite(ev);
+  $('#cpBrief').onclick = () => copy(agentBrief(ev));
+  $('#dlBrief').onclick = () => saveBrief(ev);
+}
+
+async function runAI(r){
+  if (!S.sample || S.aiBusy) return;
+  const c = S.crm[r.id] || {}, s = stage(r), ev = S.events.find(e => e.id === r.eventId) || {};
+  S.aiBusy = true; S.aiErr = ''; renderPanel();
+  const memos = (c.memos||[]).map(m => `- ${new Date(m.at).toISOString().slice(0,10)} [${m.kind}] ${m.text||'(没写内容)'}`).join('\n') || '(还没有备忘录)';
+  const prompt = `你是一位马来西亚的资深业务教练，帮一位企业家（活动主办人 Jaspher）跟进活动报名者。他用"147法则"：首次联系后第4天、第7天再跟进。
+请根据以下资料，判断这个人目前的意向，并给出具体可执行的下一步。语气用马来西亚华人自然口语，简洁实用，不要夸张。
+
+【活动】${ev.name||r.eventName}｜日期 ${ev.date||'-'}｜费用 ${ev.fee||'-'}
+【报名者】姓名 ${r.name}｜公司 ${r.company||'-'}｜职位 ${r.title||'-'}｜行业 ${r.industry||'-'}
+【报名时写的】${r.note||'-'}
+【目前阶段】${s.label}｜已付款：${c.paid?'是':'否'}｜已出席：${isAtt(r.id)?'是':'否'}｜意向标记：${c.heat||'未标'}
+【成交管道】${c.deal||'潜在'}｜金额 ${c.dealValue||'-'}｜产品 ${c.dealWhat||'-'}
+【会后问卷】${fbFor(r).map(f => `评分${f.rating}/5；收获：${f.gain||'-'}；建议：${f.improve||'-'}；想要：${f.next||'-'}`).join(' / ') || '(没填)'}
+【推荐人跟进】${r.ref ? refName(r) + '：' + (tlogsOf(r.id).map(l => `${String(l.at).slice(0,10)} [${l.kind}] ${l.text||'(没写)'}`).join('；') || '还没记录') : '没有推荐人'}
+【参加历史】${history(r).map(h => h.eventName + (isAtt(h.id)?'(出席)':'') + ((S.crm[h.id]||{}).paid?'(已付)':'')).join('、') || '第一次报名'}
+【备忘录（时间顺序）】
+${memos}
+
+只回 JSON，格式：{"summary":"一两句总结目前情况","intent":"热/温/冷 + 一句原因","steps":["下一步1","下一步2","下一步3"],"message":"一段可以直接发 WhatsApp 的讯息，用对方名字，80字以内"}`;
+  try {
+    const out = await S.sample.json(prompt, { modelTier:'default' });
+    const ai = { at:Date.now(), summary:String(out.summary||''), intent:String(out.intent||''), steps:(Array.isArray(out.steps)?out.steps:[]).slice(0,5).map(String), message:String(out.message||'') };
+    S.aiBusy = false;
+    saveCrm(r.id, { ai });
+  } catch(err){
+    S.aiBusy = false;
+    S.aiErr = err && err.code === 'not_granted' ? '你没有允许这页使用 AI。' : err && err.code === 'rate_limited' ? 'AI 使用次数暂时到顶，迟点再试。' : 'AI 分析失败，请再试一次。';
+    renderPanel();
+  }
+}
+
+// ===== 启动 =====
+$('#refresh').onclick = () => { S.loaded = false; render(); loadSheet(true); };
+render();
+(async () => {
+  const [db, mcp, sample, downloads] = await Promise.all([claude.use('db'), claude.use('mcp'), claude.use('sample'), claude.use('downloads')]);
+  S.db = db; S.mcp = mcp; S.sample = sample; S.downloads = downloads;
+  if (!db){ $('#main').innerHTML = '<div class="banner err">资料库连接不到。请用你自己的 Claude 账号登录后打开这一页。</div>'; return; }
+  let gotCfg = false, gotCrm = false;
+  const timer = setTimeout(() => { if (!S.dbReady) $('#main').innerHTML = '<div class="banner err">资料库暂时连不到，请检查网络，稍后会自动再试。</div>'; }, 10000);
+  const ready = () => { if (gotCfg && gotCrm && !S.dbReady){ S.dbReady = true; clearTimeout(timer); render(); loadSheet(false); } };
+  db.doc('config/main').onSnapshot(snap => {
+    const prevSheet = S.cfg.sheetId;
+    S.cfg = snap.exists ? (snap.data() || {}) : {};
+    if (S.cfg.teamAI && !S.teamAI) S.teamAI = S.cfg.teamAI;
+    gotCfg = true; ready();
+    if (S.dbReady && prevSheet !== undefined && prevSheet !== S.cfg.sheetId) loadSheet(true);
+  }, () => { gotCfg = true; ready(); });
+  db.collection('crm').onSnapshot(snap => {
+    const m = {}; snap.docs.forEach(d => { m[d.id] = d.data() || {}; });
+    for (const id in S.crm){ if (chains[id] && !m[id]) m[id] = S.crm[id]; }
+    S.crm = m; gotCrm = true; ready();
+    const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('#main form');
+    if (S.dbReady && !typing) render();
+  }, () => { gotCrm = true; ready(); });
+})();
+</script>

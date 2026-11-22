@@ -1,0 +1,132 @@
+<title>活动报名系统 Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<style>
+/* 布局：左边是说明 + 切换，右边是一支「手机」跑真正的页面。窄屏时上下叠。单一浅色主题，跟系统本身一致 */
+:root{
+  --brand:#0E5E3F; --brand-2:#13804F; --soft:#E7F4EC; --bg:#EEF2F0; --card:#FFFFFF; --ink:#16201B; --muted:#5E6B64; --line:#DCE4DF; --gold:#F7C948;
+  --font:'Noto Sans SC',-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);margin:0}
+*{box-sizing:border-box}
+button{font-family:inherit;font-size:14px;cursor:pointer}
+.page{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;max-width:1080px;margin:0 auto;padding-block:20px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));min-height:100%}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.hd{background:linear-gradient(160deg,var(--brand),#0A4A31);color:#fff;border-radius:20px;padding:18px}
+.hd h1{margin:0;font-size:22px;font-weight:900;text-wrap:balance}
+.hd p{margin:6px 0 0;opacity:.88;font-size:14px;line-height:1.6}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:var(--card);border-radius:16px;padding:6px}
+.tabs button{border:0;background:transparent;border-radius:12px;padding:10px 4px;color:var(--muted);font-weight:700;line-height:1.3}
+.tabs button small{display:block;font-weight:400;font-size:11px}
+.tabs button.on{background:var(--brand);color:#fff}
+.tabs button:focus-visible,.chip:focus-visible,.go:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.ctx{background:var(--card);border-radius:16px;padding:14px;display:grid;gap:10px}
+.ctx b{font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;color:var(--ink)}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.hint{font-size:13px;color:var(--muted);line-height:1.6;margin:0}
+.kbd{font-family:ui-monospace,Menlo,monospace;background:var(--soft);color:var(--brand);border-radius:6px;padding:1px 6px;font-weight:700}
+select{font-family:inherit;font-size:14px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#FAFCFB;color:var(--ink);width:100%}
+.go{border:0;background:var(--brand);color:#fff;border-radius:10px;padding:9px 14px;font-weight:700}
+.go.alt{background:var(--soft);color:var(--brand)}
+.steps{background:var(--card);border-radius:16px;padding:14px 16px}
+.steps h2{margin:0 0 8px;font-size:15px}
+.steps ol{margin:0;padding-left:20px;line-height:1.75;font-size:14px}
+.phone{width:400px;max-width:100%;height:min(820px, calc(100vh - 40px));position:sticky;top:20px;border-radius:34px;background:#101614;padding:10px;box-shadow:0 30px 60px -30px rgba(14,94,63,.55)}
+.phone iframe{width:100%;height:100%;border:0;border-radius:26px;background:#F4F6F5;display:block}
+.who{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--brand);font-weight:900;font-size:12px;border-radius:999px;padding:4px 12px;white-space:nowrap}
+@media (max-width:820px){
+  .page{grid-template-columns:minmax(0,1fr);gap:14px}
+  .phone{width:100%;height:78vh;position:relative;top:0;border-radius:26px;padding:6px}
+  .phone iframe{border-radius:20px}
+  .side{display:contents}
+  .hd{order:1}.tabs{order:2}.ctx{order:3}.phone{order:4}.steps{order:5}
+}
+</style>
+
+<div class="page">
+  <div class="side">
+    <div class="hd"><h1>活动报名 + 团队推荐系统 · Demo</h1>
+      <p>这是示范资料，随便点、随便报名，不会碰到你真的 Google Sheet。四个画面共用同一份资料：在参加者页报名，团队页和后台马上看得到。刷新这页就重置。</p></div>
+    <div class="tabs" role="tablist" aria-label="切换画面">
+      <button type="button" role="tab" data-v="front" id="t_front">参加者<small>报名页</small></button>
+      <button type="button" role="tab" data-v="ticket" id="t_ticket">入场卡<small>扫码签到</small></button>
+      <button type="button" role="tab" data-v="team" id="t_team">团队成员<small>推荐 + 跟进</small></button>
+      <button type="button" role="tab" data-v="admin" id="t_admin">后台<small>只有你看</small></button>
+    </div>
+    <div class="ctx" id="ctx"></div>
+    <div class="steps"><h2>建议这样试（3 分钟）</h2><ol>
+      <li>「参加者」选 <b>Amy 的推荐链接</b>，报名「SME 老板 AI 实战分享会」，看入场卡。</li>
+      <li>「团队成员」以 Amy 登入，新报名会出现在「新报名，还没联系」。点进去看名片，按「记录这次联系」写备注，再按 AI「分析」。</li>
+      <li>「入场卡」选刚才的报名，按「工作人员扫码后」，PIN 输入 <span class="kbd">123456</span>。</li>
+      <li>「后台」去「数据」看团队排行榜和 AI 团队建议，「名单」可以按推荐人筛选，「设置」可以加团队成员。</li>
+    </ol></div>
+  </div>
+  <div class="phone"><div class="who" id="who">参加者看到的</div><iframe id="fr" title="系统画面"></iframe></div>
+</div>
+
+<script>
+/*__MOCK__*/
+const SRC = /*__SRC__*/;
+const BRIDGE = `<script>(function(){var D=parent.DEMO;function run(){var ok=function(){},fail=function(){};var p=new Proxy({},{get:function(_,k){if(k==='withSuccessHandler')return function(f){ok=f;return p};if(k==='withFailureHandler')return function(f){fail=f;return p};return function(){var a=[].slice.call(arguments);setTimeout(function(){try{var r=D.api[k].apply(null,JSON.parse(JSON.stringify(a)));ok(r===undefined?null:JSON.parse(JSON.stringify(r)))}catch(e){fail({message:e.message})}},300)}}});return p}window.google={script:{get run(){return run()}}};window.claude={use:function(n){return Promise.resolve(D.claude[n]||null)}};})();<\/script>`;
+const V = { view:'front', ref:'AMY01', reg:'', mode:'t', member:'AMY01' };
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const boot = o => JSON.stringify(Object.assign({ brand:'TCC 活动', organizer:'60123456789', eventId:'', feedbackId:'', source:'', ticket:'', checkin:'', key:'', ref:'', url:DEMO.URL }, o)).replace(/</g,'\\u003c');
+function page(name, b){
+  let h = SRC[name];
+  if (b) h = h.replace('<?!= boot ?>', b);
+  h = h.replace('<base target="_top">', '<base target="_blank">');
+  if (name === 'admin') h = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' + BRIDGE + '</head><body>' + h + '</body></html>';
+  else h = h.replace('<head>', '<head>' + BRIDGE);
+  return h;
+}
+function load(){
+  DEMO.resetListeners();
+  const fr = $('#fr');
+  if (V.view === 'front') fr.srcdoc = page('Index', boot({ ref:V.ref, source:V.ref ? '' : '' }));
+  else if (V.view === 'ticket'){
+    const r = DEMO.SH.Registrations.find(x => x[0] === V.reg) || DEMO.SH.Registrations[DEMO.SH.Registrations.length-1];
+    V.reg = r[0];
+    fr.srcdoc = page('Index', boot(V.mode === 't' ? { ticket:r[0], key:r[13] } : { checkin:r[0], key:r[13] }));
+  }
+  else if (V.view === 'team'){
+    const m = DEMO.SH.Team.find(x => x[0] === V.member);
+    try { localStorage.setItem('team_auth', JSON.stringify({ code:m[0], pin:m[3] })); } catch(_) {}
+    fr.srcdoc = page('Team', boot({}));
+  }
+  else fr.srcdoc = page('admin');
+  $('#who').textContent = { front:'参加者看到的', ticket:V.mode === 't' ? '参加者的入场卡' : '工作人员扫码后', team:'团队成员看到的', admin:'你（Jaspher）看到的后台' }[V.view];
+}
+function ctx(){
+  const team = DEMO.SH.Team.slice(1);
+  let h = '';
+  if (V.view === 'front'){
+    h = `<b>用谁的链接打开报名页？</b><div class="chips">${[['','自己来的（没有推荐人）']].concat(team.map(m => [m[0], m[1] + ' 的推荐链接'])).map(([c,l]) => `<button type="button" class="chip ${V.ref===c?'on':''}" data-ref="${c}">${esc(l)}</button>`).join('')}</div>
+      <p class="hint">真的链接长这样：<span class="kbd">…/exec?e=E1&amp;r=${esc(V.ref||'代码')}</span>。用推荐链接报名，这个人就会出现在那位成员的名单里。</p>`;
+  } else if (V.view === 'ticket'){
+    const regs = DEMO.SH.Registrations.slice(1).slice().reverse();
+    if (DEMO.lastReg && V.reg !== DEMO.lastReg && !V.pickedReg) V.reg = DEMO.lastReg;
+    h = `<b>选一位报名者</b><select id="regSel" aria-label="选报名者">${regs.map(r => `<option value="${esc(r[0])}" ${V.reg===r[0]?'selected':''}>${esc(r[4])} · ${esc(r[3])}${r[12] ? ' · 已签到' : ''}</option>`).join('')}</select>
+      <div class="chips"><button type="button" class="chip ${V.mode==='t'?'on':''}" data-mode="t">参加者看到的入场卡</button><button type="button" class="chip ${V.mode==='c'?'on':''}" data-mode="c">工作人员扫码后</button></div>
+      <p class="hint">活动当天你用手机相机扫入场卡上的二维码，就会打开「扫码后」这一页。第一次要输入签到 PIN，示范是 <span class="kbd">123456</span>。同一张卡扫第二次会变橙色。</p>`;
+  } else if (V.view === 'team'){
+    h = `<b>以哪位成员登入？</b><div class="chips">${team.map(m => `<button type="button" class="chip ${V.member===m[0]?'on':''}" data-mem="${esc(m[0])}">${esc(m[1])}</button>`).join('')}</div>
+      <p class="hint">成员只看得到自己带来的人。示范账号：${team.map(m => `<span class="kbd">${esc(m[0])}</span> / ${esc(m[3])}`).join('，')}。按「登出」可以看登入画面。</p>`;
+  } else {
+    h = `<b>你的后台</b><p class="hint">底下五个分页：今日、名单、活动、数据、设置。团队排行榜在「数据」，加成员和发登入资料在「设置」。AI 在 Demo 里是示范回复，正式版会真的分析。</p>`;
+  }
+  $('#ctx').innerHTML = h;
+  document.querySelectorAll('[data-ref]').forEach(b => b.onclick = () => { V.ref = b.dataset.ref; ctx(); load(); });
+  document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { V.mode = b.dataset.mode; ctx(); load(); });
+  document.querySelectorAll('[data-mem]').forEach(b => b.onclick = () => { V.member = b.dataset.mem; ctx(); load(); });
+  const rs = $('#regSel'); if (rs) rs.onchange = e => { V.reg = e.target.value; V.pickedReg = true; load(); };
+}
+function go(v){ V.view = v; V.pickedReg = false; document.querySelectorAll('.tabs button').forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }); ctx(); load(); }
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => go(b.dataset.v));
+go('front');
+</script>
