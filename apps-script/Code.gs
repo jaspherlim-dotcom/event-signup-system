@@ -5,10 +5,11 @@
  */
 
 // ===== 你可以改的设定 =====
-const SHEET_ID = '';                 // 留空 = 用这个脚本所在的 Sheet（推荐）。也可以填 Sheet ID
+const SHEET_ID = '';                 // 留空 = 用这个脚本所在的 Sheet（推荐）
 const BRAND = '活动报名';            // 页面顶部显示的名字，例如 'TCC Capital 活动'
 const ORGANIZER_WHATSAPP = '';       // 主办方 WhatsApp，例如 '60123456789'，留空就不显示按钮
 const STAFF_PIN = '';                // 签到密码（至少 6 位数字），扫码签到时要输入一次。一定要改！
+const ADMIN_PIN = '';                // 后台登入密码（至少 8 位，字母+数字更安全）。一定要改！后台网址 = 网页应用网址?admin
 const AI_MODEL = 'claude-sonnet-5-5'; // 团队页 AI 建议用的模型。API key 放在 项目设置 > 脚本属性 ANTHROPIC_API_KEY，不放就用内建建议
 // ==========================
 
@@ -17,7 +18,8 @@ const REG_COLS = 15;    // 报名编号, 报名时间, 活动ID, 活动名称, �
 
 function doGet(e) {
   const isTeam = !!(e && e.parameter && 'team' in e.parameter);
-  const t = HtmlService.createTemplateFromFile(isTeam ? 'Team' : 'Index');
+  const isAdmin = !!(e && e.parameter && 'admin' in e.parameter);
+  const t = HtmlService.createTemplateFromFile(isAdmin ? 'Admin' : isTeam ? 'Team' : 'Index');
   t.boot = JSON.stringify({
     brand: BRAND,
     organizer: ORGANIZER_WHATSAPP,
@@ -28,10 +30,11 @@ function doGet(e) {
     checkin: (e && e.parameter && e.parameter.c) || '',
     key: (e && e.parameter && e.parameter.k) || '',
     ref: String((e && e.parameter && e.parameter.r) || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12),
-    url: ScriptApp.getService().getUrl()
+    url: ScriptApp.getService().getUrl(),
+    ai: !!PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY')
   }).replace(/</g, '\\u003c');
   return t.evaluate()
-    .setTitle(isTeam ? BRAND + ' · 团队' : BRAND)
+    .setTitle(isAdmin ? BRAND + ' · 后台' : isTeam ? BRAND + ' · 团队' : BRAND)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -300,17 +303,105 @@ function teamAI(code, pin, regId) {
     '【报名时写的】' + (r.note || '-') + '\n【已签到】' + (r.checkin ? '是' : '否') + '\n' +
     '【跟进记录】\n' + (logs.map(l => '- ' + l.at.slice(0, 10) + ' [' + l.kind + '] ' + (l.text || '(没写)')).join('\n') || '(还没有)') + '\n\n' +
     '只回 JSON：{"summary":"一两句总结","intent":"热/温/冷 + 原因","steps":["下一步1","下一步2","下一步3"],"message":"可以直接发 WhatsApp 的讯息，用对方名字，80字以内"}';
-  const res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    payload: JSON.stringify({ model: AI_MODEL, max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
-  });
-  if (res.getResponseCode() !== 200) throw new Error('AI 暂时用不到，请迟点再试。');
-  const txt = (JSON.parse(res.getContentText()).content || []).map(c => c.text || '').join('');
-  const j = txt.match(/\{[\s\S]*\}/);
-  let out;
-  try { out = JSON.parse(j ? j[0] : txt); } catch (_) { throw new Error('AI 回复看不懂，请再按一次。'); }
+  const out = callClaude_(prompt, 800);
   const ai = { summary: String(out.summary || ''), intent: String(out.intent || ''), steps: (out.steps || []).slice(0, 5).map(String), message: String(out.message || '') };
   teamLog(code, pin, regId, 'AI建议', JSON.stringify(ai));
   return ai;
 }
+
+/** 叫 Claude，回 JSON 物件 */
+function callClaude_(prompt, maxTokens) {
+  const key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  if (!key) throw new Error('还没开通 AI（要在脚本属性放 ANTHROPIC_API_KEY）。');
+  const res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    payload: JSON.stringify({ model: AI_MODEL, max_tokens: maxTokens || 1000, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (res.getResponseCode() !== 200) throw new Error('AI 暂时用不到，请迟点再试。');
+  const txt = (JSON.parse(res.getContentText()).content || []).map(c => c.text || '').join('');
+  const j = txt.match(/\{[\s\S]*\}/);
+  try { return JSON.parse(j ? j[0] : txt); } catch (_) { throw new Error('AI 回复看不懂，请再按一次。'); }
+}
+
+// ================= 后台（?admin）=================
+// 跟进记录存在 CRM 表（报名编号, 资料JSON, 更新时间），设定存在 Config 表（名称, 资料JSON）
+function adminAuth_(pin) {
+  const cache = CacheService.getScriptCache();
+  const fails = +(cache.get('afail') || 0);
+  if (fails >= 10) throw new Error('密码错误太多次，请 15 分钟后再试。');
+  if (!ADMIN_PIN || String(ADMIN_PIN).length < 8) throw new Error('还没设定后台密码（Code.gs 里的 ADMIN_PIN，至少 8 位）。');
+  if (String(pin) !== String(ADMIN_PIN)) { cache.put('afail', String(fails + 1), 900); throw new Error('密码不对。'); }
+}
+function adminLogin(pin) { adminAuth_(pin); return { ok: true, sheetId: ss_().getId(), url: ScriptApp.getService().getUrl() }; }
+
+/** 后台读写 Sheet（跟 Google Sheets 连接器同样的用法） */
+function adminSheet(pin, tool, range, values) {
+  adminAuth_(pin);
+  const m = String(range).match(/^(\w+)!([A-Z]+)(\d+)(?::([A-Z]+)(\d+)?)?$/);
+  if (!m) throw new Error('范围格式不对：' + range);
+  const allowed = ['Events', 'Registrations', 'Feedback', 'Team', 'TeamFollow'];
+  if (allowed.indexOf(m[1]) < 0) throw new Error('不能读写这个表：' + m[1]);
+  const sh = m[1] === 'Team' ? tabOrCreate_('Team', ['代码', '姓名', '电话', 'PIN', '状态', '创建时间'])
+           : m[1] === 'TeamFollow' ? tabOrCreate_('TeamFollow', ['时间', '报名编号', '成员代码', '类型', '内容'])
+           : m[1] === 'Feedback' ? tabOrCreate_('Feedback', ['提交时间','活动ID','活动名称','姓名','电话WhatsApp','评分','最大收获','改进建议','下一步意向'])
+           : m[1] === 'Registrations' ? regSheet_() : sheet_(m[1]);
+  const col = s => s.split('').reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0);
+  const c0 = col(m[2]), r0 = +m[3];
+  if (tool === 'get_values') {
+    const c1 = m[4] ? col(m[4]) : c0;
+    const last = sh.getLastRow();
+    const r1 = m[5] ? +m[5] : (m[4] ? last : r0);
+    if (r1 < r0) return { values: [] };
+    const v = sh.getRange(r0, c0, r1 - r0 + 1, c1 - c0 + 1).getDisplayValues();
+    while (v.length && v[v.length - 1].every(x => x === '')) v.pop();
+    return { values: v };
+  }
+  if (tool === 'append_values') {
+    const lock = LockService.getScriptLock(); lock.waitLock(10000);
+    try { (values || []).forEach(row => sh.appendRow(row)); } finally { lock.releaseLock(); }
+    return { ok: true };
+  }
+  if (tool === 'update_values') {
+    sh.getRange(r0, c0, values.length, values[0].length).setValues(values);
+    return { ok: true };
+  }
+  throw new Error('不支持：' + tool);
+}
+
+function crmSheet_() { return tabOrCreate_('CRM', ['报名编号', '资料JSON', '更新时间']); }
+function cfgSheet_() { return tabOrCreate_('Config', ['名称', '资料JSON']); }
+
+/** 一次拿全部跟进资料和设定 */
+function adminState(pin) {
+  adminAuth_(pin);
+  const crm = {}, config = {};
+  const c = crmSheet_(), n = c.getLastRow() - 1;
+  if (n > 0) c.getRange(2, 1, n, 2).getValues().forEach(r => { if (r[0]) { try { crm[r[0]] = JSON.parse(r[1]); } catch (_) {} } });
+  const g = cfgSheet_(), k = g.getLastRow() - 1;
+  if (k > 0) g.getRange(2, 1, k, 2).getValues().forEach(r => { if (r[0]) { try { config[r[0]] = JSON.parse(r[1]); } catch (_) {} } });
+  return { crm: crm, config: config };
+}
+
+/** 写一笔（path = 'crm/<报名编号>' 或 'config/main'） */
+function adminSet(pin, path, data) {
+  adminAuth_(pin);
+  const p = String(path).split('/');
+  const sh = p[0] === 'crm' ? crmSheet_() : p[0] === 'config' ? cfgSheet_() : null;
+  if (!sh || !p[1]) throw new Error('路径不对：' + path);
+  const json = JSON.stringify(data || {});
+  if (json.length > 45000) throw new Error('这笔资料太大了，请删掉一些旧备忘录。');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    const n = sh.getLastRow() - 1;
+    const ids = n > 0 ? sh.getRange(2, 1, n, 1).getValues().map(r => String(r[0])) : [];
+    const i = ids.indexOf(p[1]);
+    const now = Utilities.formatDate(new Date(), 'Asia/Kuala_Lumpur', 'yyyy-MM-dd HH:mm:ss');
+    const row = p[0] === 'crm' ? [p[1], json, now] : [p[1], json];
+    if (i >= 0) sh.getRange(i + 2, 1, 1, row.length).setValues([row]); else sh.appendRow(row);
+  } finally { lock.releaseLock(); }
+  return { ok: true };
+}
+
+/** 后台 AI */
+function adminAI(pin, prompt) { adminAuth_(pin); return callClaude_(String(prompt).slice(0, 20000), 1200); }

@@ -1,0 +1,51 @@
+<script>
+/* 后台跑在 Google Apps Script 上：用 google.script.run 代替 Claude 的资料库 / Google Sheets 连接器 / AI */
+(function(){
+  var BOOT = <?!= boot ?>;
+  var PIN = null; try { PIN = localStorage.getItem('admin_pin'); } catch(_) {}
+  var info = {}, state = { crm:{}, config:{} }, docL = {}, colL = [], readyRes, ready = new Promise(function(r){ readyRes = r; });
+  function call(fn){ var a = [].slice.call(arguments, 1); return new Promise(function(ok, no){
+    google.script.run.withSuccessHandler(ok).withFailureHandler(function(e){ var m = (e && e.message) || '连不到服务器';
+      if (/密码不对|太多次|还没设定后台密码/.test(m)) { try { localStorage.removeItem('admin_pin'); } catch(_) {} showLogin(m); }
+      var err = new Error(m); err.code = m; no(err); })[fn].apply(null, [PIN].concat(a)); }); }
+  function showLogin(msg){
+    var o = document.getElementById('adminLogin');
+    if (!o) { o = document.createElement('div'); o.id = 'adminLogin'; document.body.appendChild(o); }
+    o.innerHTML = '<div style="position:fixed;inset:0;z-index:999;background:linear-gradient(160deg,#0E5E3F,#0A4A31);display:grid;place-items:center;padding:24px 16px;font-family:inherit">'
+      + '<form id="alf" style="background:#fff;border-radius:22px;padding:24px 20px;width:100%;max-width:380px;display:grid;gap:14px">'
+      + '<b style="font-size:22px">后台登入</b><div style="color:#66736C;font-size:14px">只有主办人用。输入 Code.gs 里设的 ADMIN_PIN。</div>'
+      + '<input id="alp" type="password" autocomplete="current-password" aria-label="后台密码" style="border:1px solid #E2E8E4;border-radius:12px;padding:12px 14px;font-size:16px">'
+      + '<div id="ale" role="alert" style="color:#C8432F;font-size:14px;min-height:20px"></div>'
+      + '<button id="alb" type="submit" style="border:0;border-radius:14px;padding:14px;font-weight:700;background:#0E5E3F;color:#fff;font-size:16px;cursor:pointer">登入</button></form></div>';
+    document.getElementById('ale').textContent = msg || '';
+    document.getElementById('alf').onsubmit = function(e){ e.preventDefault(); var v = document.getElementById('alp').value.trim(); if (!v) return;
+      var b = document.getElementById('alb'); b.disabled = true; b.textContent = '登入中…'; PIN = v; login(); };
+  }
+  function login(){
+    call('adminLogin').then(function(r){ info = r; try { localStorage.setItem('admin_pin', PIN); } catch(_) {}
+      var o = document.getElementById('adminLogin'); if (o) o.remove(); return refresh(true); }).then(function(){ readyRes(); })
+      .catch(function(e){ if (!/密码|太多次/.test(e.message)) showLogin(e.message); });
+  }
+  function cfg(){ var c = JSON.parse(JSON.stringify(state.config.main || {})); c.sheetId = info.sheetId; c.webAppUrl = info.url; return c; }
+  function fire(){ Object.keys(docL).forEach(function(p){ docL[p].forEach(function(cb){ try { cb(snapDoc(p)); } catch(_) {} }); }); colL.forEach(function(cb){ try { cb(snapCol()); } catch(_) {} }); }
+  function snapDoc(p){ var d = p === 'config/main' ? cfg() : state.crm[p.slice(4)]; return { exists: !!d, data: function(){ return d ? JSON.parse(JSON.stringify(d)) : undefined; } }; }
+  function snapCol(){ return { docs: Object.keys(state.crm).map(function(id){ return { id: id, data: function(){ return JSON.parse(JSON.stringify(state.crm[id])); } }; }) }; }
+  var pending = 0;
+  function refresh(first){ return call('adminState').then(function(s){ if (pending && !first) return; var changed = JSON.stringify(s) !== JSON.stringify(state); state = s; if (changed || first) fire(); }); }
+  setInterval(function(){ if (PIN && info.url && !document.hidden) refresh(false).catch(function(){}); }, 30000);
+  var db = {
+    doc: function(p){ return {
+      onSnapshot: function(cb){ (docL[p] = docL[p] || []).push(cb); ready.then(function(){ cb(snapDoc(p)); }); return function(){}; },
+      set: function(d){ if (p === 'config/main') state.config.main = JSON.parse(JSON.stringify(d)); else state.crm[p.slice(4)] = JSON.parse(JSON.stringify(d));
+        pending++; return call('adminSet', p, d).then(function(){ pending--; }, function(e){ pending--; throw e; }); } }; },
+    collection: function(){ return { onSnapshot: function(cb){ colL.push(cb); ready.then(function(){ cb(snapCol()); }); return function(){}; } }; }
+  };
+  var mcp = { callTool: function(server, tool, args){ return call('adminSheet', tool, args.range, args.values || null).then(function(r){ return { payload: r }; }); } };
+  var sample = BOOT.ai ? { json: function(prompt){ return call('adminAI', prompt); } } : null;
+  var downloads = { save: function(o){ var a = document.createElement('a'); a.href = URL.createObjectURL(o.data); a.download = o.filename; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000); return Promise.resolve(); } };
+  var impl = { db: db, mcp: mcp, sample: sample, downloads: downloads };
+  window.claude = { use: function(n){ return ready.then(function(){ return impl[n] || null; }); } };
+  document.addEventListener('click', function(e){ var t = e.target.closest && e.target.closest('[data-logout]'); if (t) { try { localStorage.removeItem('admin_pin'); } catch(_) {} location.reload(); } });
+  document.addEventListener('DOMContentLoaded', function(){ if (PIN) login(); else showLogin(); });
+})();
+</script>
